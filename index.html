@@ -585,7 +585,10 @@
             for (let i = 0; i < maxRetries; i++) {
                 try {
                     const response = await fetch(url, options);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(`HTTP ${response.status}: ${errText}`);
+                    }
                     return await response.json();
                 } catch (error) {
                     if (i === maxRetries - 1) throw error;
@@ -614,7 +617,7 @@
             loadingPanel.classList.add('flex');
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 
                 const step1Payload = {
                     contents: [{ parts: [{ text: "最新の経済ニュースと機関投資家のレポートを分析し、1. 資金流入(HOT)と流出(COLD)のヒートマップ、2. 今初心者が買うべき有望な米国株または日本株の『ティッカーシンボル(例: AAPL, 7203)』を3つ厳選して教えてください。" }] }],
@@ -684,7 +687,7 @@
 
             } catch (error) {
                 console.error(error);
-                errorMsg.textContent = "AIの処理中にタイムアウトが発生しました。時間をおいて再試行してください。";
+                errorMsg.innerHTML = `エラーが発生しました:<br><span class="text-xs break-all">${error.message}</span><br><br>APIキーが正しいか、または有効か確認してください。`;
                 errorMsg.classList.remove('hidden');
                 document.getElementById('intro-panel').style.display = 'block';
             } finally {
@@ -894,7 +897,7 @@
             const tickersStr = assets.map(a => a.ticker).join(', ');
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{ parts: [{ text: `以下の保有銘柄リストについて、最新の決算、マクロ経済の動向などを深く検索し、1.アクション判定(日本語)、2.「相関性・偏りリスク」の診断を行ってください。銘柄: ${tickersStr}` }] }],
                     systemInstruction: { parts: [{ text: "プロのポートフォリオマネージャーとしてJSONで出力。" }] },
@@ -926,7 +929,7 @@
 
             } catch (error) {
                 console.error(error);
-                errorMsg.textContent = "スキャンに失敗しました。再試行してください。";
+                errorMsg.innerHTML = `スキャンに失敗しました:<br><span class="text-xs break-all">${error.message}</span>`;
                 errorMsg.classList.remove('hidden');
             } finally {
                 loadingPanel.classList.add('hidden');
@@ -942,7 +945,7 @@
             lucide.createIcons();
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{ parts: [{ text: `銘柄「${ticker}」の今日の株価がなぜ動いているのか（上がっている、あるいは下がっている理由）を検索し、投資初心者に向けて1〜2文で優しく教えてください。` }] }],
                     systemInstruction: { parts: [{ text: "優しく分かりやすい口調で。プレーンテキストで出力。" }] },
@@ -991,7 +994,7 @@
             loadingInterval = setInterval(() => { safeSetText('modal-loading-text', loadingTexts[ltIdx % loadingTexts.length]); ltIdx++; }, 1500);
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{ parts: [{ text: `銘柄「${ticker}」について深くGoogle検索し、以下の情報を完全な日本語でJSON出力してください。
 1. 専門家AIチームの議論と最終判断
@@ -1094,7 +1097,7 @@
                 if(loadingInterval) clearInterval(loadingInterval);
                 document.getElementById('modal-loading').classList.add('hidden');
                 const modalErrMsg = document.getElementById('modal-error-message');
-                if (modalErrMsg) { modalErrMsg.textContent = "企業カルテの生成に失敗しました。"; modalErrMsg.classList.remove('hidden'); }
+                if (modalErrMsg) { modalErrMsg.innerHTML = `企業カルテの生成に失敗しました:<br><span class="text-xs break-all">${error.message}</span>`; modalErrMsg.classList.remove('hidden'); }
             }
         }
 
