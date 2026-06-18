@@ -187,7 +187,7 @@
                 <button onclick="startAutoPilotMultiStep()" class="btn-zenith text-white text-2xl font-black px-12 py-8 rounded-full inline-flex items-center justify-center w-full md:w-auto shadow-2xl">
                     <i data-lucide="sparkles" class="w-8 h-8 mr-3"></i> 市場全体をスキャンする
                 </button>
-                <p class="mt-8 text-sm text-slate-500">※より深く分析するため2段階で思考します（約20〜30秒）</p>
+                <p class="mt-8 text-sm text-slate-500">※日米6銘柄を深く分析するため少し時間がかかります（約30〜40秒）</p>
             </div>
 
             <div id="discover-results" class="hidden flex-col gap-8 opacity-0 transition-opacity duration-1000">
@@ -278,7 +278,7 @@
                 <form id="add-asset-form" class="flex flex-col sm:flex-row gap-3">
                     <div class="flex-grow relative">
                         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
-                        <input type="text" id="add-ticker" placeholder="ティッカー (例: AAPL, NVDA)" required class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-purple-500 en-font uppercase transition-colors">
+                        <input type="text" id="add-ticker" placeholder="ティッカー (例: AAPL, 7203)" required class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-purple-500 en-font uppercase transition-colors">
                     </div>
                     <div class="w-full sm:w-1/4">
                         <input type="number" id="add-price" placeholder="取得単価" class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 en-font transition-colors" step="0.01">
@@ -468,7 +468,7 @@
 
                 <div id="modal-content-data" class="hidden flex-col gap-8">
 
-                    <!-- リアルタイム折れ線グラフ (安全なIframe方式) -->
+                    <!-- 【NEW】リアルタイム折れ線グラフ (安全なIframe方式) -->
                     <div class="w-full h-[300px] md:h-[400px] rounded-2xl overflow-hidden border border-slate-700/50 bg-[#131722] shadow-[0_0_20px_rgba(0,0,0,0.5)]" id="tv-chart-container">
                     </div>
 
@@ -576,7 +576,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            checkAuth(); // 起動時にキーがあるかチェック
+            checkAuth();
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             } else {
@@ -623,72 +623,22 @@
 
         document.getElementById('close-modal-btn').addEventListener('click', () => { stopSpeaking(); modal.classList.remove('opacity-100'); setTimeout(() => modal.classList.add('hidden'), 300); });
         
-        // 【究極の自動修復通信システム】
-        // Googleサーバーに直接「いま使えるモデル」を問い合わせて自動取得
-        async function getAvailableModel() {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-            const response = await fetch(url);
-            if (!response.ok) {
-                if (response.status === 401) throw new Error("APIキーが無効です。正しいキーを入力してください。");
-                throw new Error(`モデル一覧の取得に失敗しました (${response.status})`);
+        // 【安定通信システム】
+        async function fetchWithRetry(url, options, maxRetries = 3) {
+            const delays = [2000, 4000, 8000];
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        if (response.status === 401) throw new Error("APIキーが無効です");
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
             }
-            const data = await response.json();
-            
-            const validModels = data.models.filter(m => 
-                m.name.includes('gemini') && 
-                m.supportedGenerationMethods && 
-                m.supportedGenerationMethods.includes('generateContent')
-            ).map(m => m.name.replace('models/', ''));
-
-            if (validModels.length === 0) throw new Error("利用可能なGeminiモデルが見つかりません。");
-
-            // 最新の高速モデルを優先的に選択
-            const preferred = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-            for (const p of preferred) {
-                const found = validModels.find(m => m.includes(p));
-                if (found) return found;
-            }
-            return validModels[0];
-        }
-
-        async function callGeminiAPI(payload) {
-            let model = localStorage.getItem('autopilot_model');
-            if (!model) {
-                model = await getAvailableModel();
-                localStorage.setItem('autopilot_model', model);
-            }
-
-            let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            
-            let response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            
-            // 記録していたモデルが古くなって404になった場合は、再取得してリトライ
-            if (response.status === 404) {
-                model = await getAvailableModel();
-                localStorage.setItem('autopilot_model', model);
-                url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-                response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            }
-
-            if (response.ok) return await response.json();
-            if (response.status === 401) throw new Error("APIキーが無効です。正しいキーを入力してください。");
-
-            const errText = await response.text();
-            console.warn(`[${model}] エラー検知:`, errText);
-            
-            // 検索ツール制限(400, 403)に引っかかった場合、検索ツールを外して再チャレンジ（自己修復）
-            if ((response.status === 400 || response.status === 403) && payload.tools) {
-                const fallbackPayload = { ...payload };
-                delete fallbackPayload.tools; // 検索ツールを削除してAIの知識のみで勝負
-                console.log(`[${model}] 検索ツールを無効化して自己修復実行...`);
-                const fbResponse = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fallbackPayload) });
-                if (fbResponse.ok) return await fbResponse.json();
-                
-                const fbErrText = await fbResponse.text();
-                throw new Error(`修復通信エラー (${fbResponse.status}): ${fbErrText}`);
-            }
-            
-            throw new Error(`APIエラー (${response.status}): ${errText}`);
         }
 
         function extractNumber(str) {
@@ -706,13 +656,16 @@
             errorMsg.classList.add('hidden');
 
             loadingTitle.textContent = "AI多段思考プロセスを実行中...";
-            loadingText.textContent = "ステップ1/2: 市場のトレンドと有望な3銘柄を抽出中...";
+            loadingText.textContent = "ステップ1/2: 市場のトレンドと有望な6銘柄を抽出中...";
             loadingPanel.classList.remove('hidden');
             loadingPanel.classList.add('flex');
 
             try {
+                // 前回成功したモデルに固定
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                
                 const step1Payload = {
-                    contents: [{ parts: [{ text: "最新の経済ニュースと機関投資家のレポートを分析し、1. 資金流入(HOT)と流出(COLD)のヒートマップ、2. 今初心者が買うべき有望な米国株または日本株の『ティッカーシンボル(例: AAPL, 7203)』を3つ厳選して教えてください。" }] }],
+                    contents: [{ parts: [{ text: "最新の経済ニュースと機関投資家のレポートを分析し、1. 資金流入(HOT)と流出(COLD)のヒートマップ、2. 今初心者が買うべき有望な【米国株を3銘柄】と【日本株を3銘柄】の合計6銘柄を厳選して教えてください。ティッカーシンボルは米国株は「AAPL」、日本株は「7203」のように出力してください。" }] }],
                     systemInstruction: { parts: [{ text: "必ずJSONで出力してください。" }] },
                     tools: [{ google_search: {} }],
                     generationConfig: {
@@ -722,22 +675,22 @@
                             properties: {
                                 marketSignal: { type: "OBJECT", properties: { status: { type: "STRING" }, reason: { type: "STRING" } }, required: ["status", "reason"] },
                                 sectorHeatmap: { type: "ARRAY", items: { type: "OBJECT", properties: { sectorName: { type: "STRING" }, heat: { type: "STRING" }, reason: { type: "STRING" } } } },
-                                selectedTickers: { type: "ARRAY", items: { type: "STRING" }, description: "選ばれた3つのティッカーシンボル" }
+                                selectedTickers: { type: "ARRAY", items: { type: "STRING" }, description: "選ばれた6つのティッカーシンボル" }
                             },
                             required: ["marketSignal", "sectorHeatmap", "selectedTickers"]
                         }
                     }
                 };
 
-                const step1Result = await callGeminiAPI(step1Payload);
+                const step1Result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(step1Payload) });
                 const step1Data = JSON.parse(step1Result.candidates[0].content.parts[0].text);
-                const tickers = step1Data.selectedTickers.slice(0, 3).join(', ');
+                const tickers = step1Data.selectedTickers.slice(0, 6).join(', ');
 
                 loadingText.textContent = `ステップ2/2: 選出された銘柄 [ ${tickers} ] の未来シナリオを深く分析中...`;
 
                 const step2Payload = {
-                    contents: [{ parts: [{ text: `以下の3銘柄について最新ニュースを検索し、詳細な投資シナリオを作成してください。銘柄: ${tickers}` }] }],
-                    systemInstruction: { parts: [{ text: "プロのアナリストとしてJSONで日本語出力してください。配分は合計100%になるように。" }] },
+                    contents: [{ parts: [{ text: `以下の6銘柄について最新ニュースを検索し、詳細な投資シナリオを作成してください。銘柄: ${tickers}。必ずGoogle検索で本日の最新株価(現在値)を正確に調べて「currentPrice」に入れてください。` }] }],
+                    systemInstruction: { parts: [{ text: "プロのアナリストとしてJSONで日本語出力してください。配分は6銘柄の合計が100%になるように。" }] },
                     tools: [{ google_search: {} }],
                     generationConfig: {
                         responseMimeType: "application/json",
@@ -770,7 +723,7 @@
                     }
                 };
 
-                const step2Result = await callGeminiAPI(step2Payload);
+                const step2Result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(step2Payload) });
                 const step2Data = JSON.parse(step2Result.candidates[0].content.parts[0].text);
 
                 const finalData = { ...step1Data, portfolio: step2Data.portfolio };
@@ -779,7 +732,11 @@
 
             } catch (error) {
                 console.error(error);
-                errorMsg.innerHTML = `エラーが発生しました:<br><span class="text-xs break-all">${error.message}</span><br><br>アクセスキー（パスワード）が間違っている可能性があります。<br><button onclick="resetApiKey()" class="mt-4 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white font-bold text-sm hover:bg-slate-700 transition-colors inline-flex items-center"><i data-lucide="key" class="w-4 h-4 mr-2"></i> キーを再入力する</button>`;
+                if (error.message.includes("APIキーが無効")) {
+                    errorMsg.innerHTML = `APIキー（パスワード）が間違っています。<br><button onclick="resetApiKey()" class="mt-4 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white font-bold text-sm hover:bg-slate-700 transition-colors inline-flex items-center"><i data-lucide="key" class="w-4 h-4 mr-2"></i> キーを再入力する</button>`;
+                } else {
+                    errorMsg.textContent = "AIの処理中にタイムアウトが発生しました。時間をおいて再試行してください。";
+                }
                 errorMsg.classList.remove('hidden');
                 document.getElementById('intro-panel').style.display = 'block';
                 lucide.createIcons();
@@ -885,7 +842,7 @@
             if (canvas && data.portfolio) {
                 const ctx = canvas.getContext('2d');
                 if (portfolioChartInstance) portfolioChartInstance.destroy();
-                portfolioChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: data.portfolio.map(i => i.ticker), datasets: [{ data: data.portfolio.map(i => i.allocationPercent), backgroundColor: ['#3b82f6', '#8b5cf6', '#db2777', '#10b981'], borderColor: 'transparent', borderWidth: 0, hoverOffset: 5 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } } });
+                portfolioChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: data.portfolio.map(i => i.ticker), datasets: [{ data: data.portfolio.map(i => i.allocationPercent), backgroundColor: ['#3b82f6', '#8b5cf6', '#db2777', '#10b981', '#f59e0b', '#06b6d4'], borderColor: 'transparent', borderWidth: 0, hoverOffset: 5 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } } });
             }
 
             recalculateBudgets();
@@ -990,6 +947,7 @@
             const tickersStr = assets.map(a => a.ticker).join(', ');
 
             try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{ parts: [{ text: `以下の保有銘柄リストについて、最新の決算、マクロ経済の動向などを深く検索し、1.アクション判定(日本語)、2.「相関性・偏りリスク」の診断を行ってください。銘柄: ${tickersStr}` }] }],
                     systemInstruction: { parts: [{ text: "プロのポートフォリオマネージャーとしてJSONで出力。" }] },
@@ -1000,7 +958,7 @@
                     }
                 };
 
-                const result = await callGeminiAPI(payload);
+                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if(!result || !result.candidates) throw new Error("無効なAPIレスポンス");
                 const aiData = JSON.parse(result.candidates[0].content.parts[0].text);
                 
@@ -1021,7 +979,11 @@
 
             } catch (error) {
                 console.error(error);
-                errorMsg.innerHTML = `スキャンに失敗しました:<br><span class="text-xs break-all">${error.message}</span><br><button onclick="resetApiKey()" class="mt-3 text-purple-400 underline font-bold text-sm hover:text-purple-300">キーを再入力する</button>`;
+                if (error.message.includes("APIキーが無効")) {
+                    errorMsg.innerHTML = `APIキー（パスワード）が間違っています。<br><button onclick="resetApiKey()" class="mt-4 text-purple-400 underline font-bold text-sm hover:text-purple-300">キーを再入力する</button>`;
+                } else {
+                    errorMsg.textContent = "スキャンに失敗しました。再試行してください。";
+                }
                 errorMsg.classList.remove('hidden');
             } finally {
                 loadingPanel.classList.add('hidden');
@@ -1037,13 +999,14 @@
             lucide.createIcons();
 
             try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{ parts: [{ text: `銘柄「${ticker}」の今日の株価がなぜ動いているのか（上がっている、あるいは下がっている理由）を検索し、投資初心者に向けて1〜2文で優しく教えてください。` }] }],
                     systemInstruction: { parts: [{ text: "優しく分かりやすい口調で。プレーンテキストで出力。" }] },
                     tools: [{ google_search: {} }]
                 };
 
-                const result = await callGeminiAPI(payload);
+                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const answer = result.candidates[0].content.parts[0].text;
                 
                 resultElement.innerHTML = `<strong>💡 AIの解説:</strong><br>${answer}`;
@@ -1072,10 +1035,17 @@
             modal.classList.remove('hidden');
             setTimeout(() => modal.classList.add('opacity-100'), 10);
 
-            // リアルタイム折れ線グラフ (安全なIframe方式)
+            // 【NEW】日本株のティッカーをTradingView用に自動変換 (例: 7203 -> TSE:7203)
+            let tvTicker = ticker;
+            if (/^\d{4}$/.test(ticker)) {
+                tvTicker = `TSE:${ticker}`;
+            } else if (/^\d{4}\.T$/i.test(ticker)) {
+                tvTicker = `TSE:${ticker.replace(/\.T$/i, '')}`;
+            }
+
             const tvContainer = document.getElementById('tv-chart-container');
             if(tvContainer) {
-                tvContainer.innerHTML = `<iframe src="https://s.tradingview.com/widgetembed/?symbol=${ticker}&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=131722&theme=dark&style=3&timezone=Asia%2FTokyo&locale=ja" width="100%" height="100%" frameborder="0" allowtransparency="true" scrolling="no" allowfullscreen=""></iframe>`;
+                tvContainer.innerHTML = `<iframe src="https://s.tradingview.com/widgetembed/?symbol=${tvTicker}&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=131722&theme=dark&style=3&timezone=Asia%2FTokyo&locale=ja" width="100%" height="100%" frameborder="0" allowtransparency="true" scrolling="no" allowfullscreen=""></iframe>`;
             }
 
             const loadingTexts = ["SNS感情を解析中...", "機関投資家の動向を照会中...", "テクニカル指標を分析中...", "未来のシナリオと注目イベントを生成中...", "AI総合評価チャートを算出中..."];
@@ -1084,6 +1054,7 @@
             loadingInterval = setInterval(() => { safeSetText('modal-loading-text', loadingTexts[ltIdx % loadingTexts.length]); ltIdx++; }, 1500);
 
             try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{ parts: [{ text: `銘柄「${ticker}」について深くGoogle検索し、以下の情報を完全な日本語でJSON出力してください。
 1. 専門家AIチームの議論と最終判断
@@ -1121,7 +1092,7 @@
                     }
                 };
                 
-                const result = await callGeminiAPI(payload);
+                const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 clearInterval(loadingInterval);
                 if(!result || !result.candidates) throw new Error("無効なAPIレスポンス");
                 const data = JSON.parse(result.candidates[0].content.parts[0].text);
@@ -1187,9 +1158,13 @@
                 document.getElementById('modal-loading').classList.add('hidden');
                 const modalErrMsg = document.getElementById('modal-error-message');
                 if (modalErrMsg) { 
-                    modalErrMsg.innerHTML = `企業カルテの生成に失敗しました:<br><span class="text-xs break-all">${error.message}</span><br><button onclick="resetApiKey()" class="mt-3 px-3 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg text-white font-bold text-xs hover:bg-red-800 transition-colors inline-flex items-center"><i data-lucide="key" class="w-3 h-3 mr-1"></i> キーを再入力</button>`; 
+                    if (error.message.includes("APIキーが無効")) {
+                        modalErrMsg.innerHTML = `APIキー（パスワード）が間違っています。<br><button onclick="resetApiKey()" class="mt-3 px-3 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg text-white font-bold text-xs hover:bg-red-800 transition-colors inline-flex items-center"><i data-lucide="key" class="w-3 h-3 mr-1"></i> キーを再入力</button>`; 
+                        lucide.createIcons();
+                    } else {
+                        modalErrMsg.textContent = "企業カルテの生成に失敗しました。"; 
+                    }
                     modalErrMsg.classList.remove('hidden'); 
-                    lucide.createIcons();
                 }
             }
         }
