@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI AUTO-PILOT (Japan Edition)</title>
+    <title>AI AUTO-PILOT (Japan Edition v2)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -27,7 +27,6 @@
         .en-font { font-family: 'Outfit', sans-serif; }
         .tech-font { font-family: 'Space Mono', monospace; letter-spacing: -0.05em; }
 
-        /* 特大実行ボタン */
         .btn-zenith {
             background: linear-gradient(135deg, #2563eb, #9333ea, #db2777);
             background-size: 200% 200%;
@@ -43,7 +42,6 @@
         }
         @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-        /* ガラス風パネル */
         .glass-panel {
             background: var(--panel-bg);
             backdrop-filter: blur(16px);
@@ -52,21 +50,13 @@
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
             border-radius: 1.5rem;
         }
-        .portfolio-card { transition: all 0.3s ease; }
-        .portfolio-card:hover {
-            border-color: rgba(168, 85, 247, 0.4);
-            box-shadow: 0 15px 50px -10px rgba(168, 85, 247, 0.2);
-            transform: translateY(-2px);
-        }
 
-        /* シナリオの確率バー */
         .prob-bar-bg { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); width: 100%; overflow: hidden; }
         .prob-bar-fill { height: 100%; border-radius: 3px; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
         .fill-bull { background: linear-gradient(90deg, #10b981, #34d399); }
         .fill-base { background: linear-gradient(90deg, #64748b, #94a3b8); }
         .fill-bear { background: linear-gradient(90deg, #ef4444, #f87171); }
 
-        /* タイムライン */
         .timeline-container { border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1rem; margin-left: 0.5rem; }
         .timeline-item { position: relative; padding-bottom: 1rem; }
         .timeline-item::before {
@@ -98,14 +88,8 @@
         .heat-warm { background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(249,115,22,0.4)); border-color: rgba(249,115,22,0.5); }
         .heat-cold { background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.4)); border-color: rgba(59,130,246,0.5); }
 
-        .speaking-pulse {
-            animation: speakPulse 1.5s infinite;
-        }
-        @keyframes speakPulse {
-            0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
-        }
+        .speaking-pulse { animation: speakPulse 1.5s infinite; }
+        @keyframes speakPulse { 0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); } 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); } }
 
         .modal-overlay { background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(10px); z-index: 50; }
         .scan-line-modal {
@@ -113,6 +97,10 @@
             position: absolute; top: 0; left: 0; animation: scan 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
         @keyframes scan { 0% { top: -10%; opacity: 0; } 50% { opacity: 1; } 100% { top: 110%; opacity: 0; } }
+
+        .rank-badge-1 { text-shadow: 0 0 20px rgba(250, 204, 21, 0.8); }
+        .rank-badge-2 { text-shadow: 0 0 20px rgba(203, 213, 225, 0.8); }
+        .rank-badge-3 { text-shadow: 0 0 20px rgba(217, 119, 6, 0.8); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col relative">
@@ -183,7 +171,7 @@
                     今最も安全で利益が狙える「買い銘柄」を発掘します。
                 </p>
 
-                <!-- 【NEW】パーソナライズ設定パネル -->
+                <!-- パーソナライズ設定パネル -->
                 <div class="mb-8 w-full max-w-4xl mx-auto glass-panel p-6 border border-purple-500/30 text-left relative z-10">
                     <h3 class="text-sm font-bold text-purple-400 mb-4 flex items-center tracking-wide">
                         <i data-lucide="sliders-horizontal" class="w-4 h-4 mr-2"></i> スキャン条件・パーソナライズ設定
@@ -209,16 +197,25 @@
                                 <option value="直近1週間" class="bg-slate-900">直近1週間</option>
                                 <option value="直近1ヶ月" class="bg-slate-900" selected>直近1ヶ月</option>
                                 <option value="直近1年" class="bg-slate-900">直近1年</option>
+                                <option value="直近3年" class="bg-slate-900">直近3年</option>
+                                <option value="直近5年" class="bg-slate-900">直近5年</option>
                                 <option value="直近10年" class="bg-slate-900">直近10年</option>
                             </select>
                         </div>
 
-                        <!-- ③ 投資予算上限 -->
+                        <!-- ③ 1株あたりの株価設定 -->
                         <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-                            <label class="block text-[11px] text-slate-400 mb-1 font-bold">投資予算上限 (円) ※空欄で無制限</label>
-                            <div class="flex items-center">
-                                <span class="text-slate-500 mr-1">¥</span>
-                                <input type="number" id="setting-budget" placeholder="無制限" min="1" class="w-full bg-transparent text-white text-sm focus:outline-none en-font">
+                            <label class="block text-[11px] text-slate-400 mb-1 font-bold">1株あたりの株価 (円) ※空欄可</label>
+                            <div class="flex items-center space-x-2">
+                                <div class="flex items-center w-1/2">
+                                    <span class="text-slate-500 mr-1 text-xs">¥</span>
+                                    <input type="number" id="setting-price-min" placeholder="下限" min="1" class="w-full bg-transparent text-white text-sm focus:outline-none en-font">
+                                </div>
+                                <span class="text-slate-500 text-xs">-</span>
+                                <div class="flex items-center w-1/2">
+                                    <span class="text-slate-500 mr-1 text-xs">¥</span>
+                                    <input type="number" id="setting-price-max" placeholder="上限" min="1" class="w-full bg-transparent text-white text-sm focus:outline-none en-font">
+                                </div>
                             </div>
                         </div>
 
@@ -235,9 +232,9 @@
                 </div>
                 
                 <button onclick="startAutoPilotMultiStep()" class="btn-zenith text-white text-2xl font-black px-12 py-8 rounded-full inline-flex items-center justify-center w-full md:w-auto shadow-2xl relative z-10">
-                    <i data-lucide="sparkles" class="w-8 h-8 mr-3"></i> 国内市場をスキャンする
+                    <i data-lucide="sparkles" class="w-8 h-8 mr-3"></i> AIおすすめ20選を抽出する
                 </button>
-                <p class="mt-8 text-sm text-slate-500 relative z-10">※確実性を重視し、条件に合う1銘柄ずつ丁寧に検索・分析します（約1〜2分かかります）</p>
+                <p class="mt-8 text-sm text-slate-500 relative z-10">※条件に合う日本株トップ20を高速でランキング化します（約15〜30秒）</p>
             </div>
 
             <div id="discover-results" class="hidden flex-col gap-8 opacity-0 transition-opacity duration-1000">
@@ -264,26 +261,17 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    <div class="lg:col-span-1 glass-panel p-6 flex flex-col items-center sticky top-24 self-start">
-                        <div class="w-full mb-6 bg-slate-900/80 p-4 rounded-xl border border-slate-700/50 shadow-inner">
-                            <label class="block text-xs font-bold text-slate-400 mb-2">投資できる予算（円）</label>
-                            <div class="flex items-center border-b border-slate-600 focus-within:border-purple-500 transition-colors pb-1">
-                                <span class="text-lg text-slate-500 mr-2 en-font">¥</span>
-                                <input type="number" id="budget-input" value="1000000" oninput="recalculateBudgets()" class="bg-transparent outline-none text-3xl font-black text-white w-full en-font tracking-tight">
-                            </div>
-                        </div>
-                        <div class="relative w-full aspect-square max-w-[220px] mb-4">
-                            <canvas id="portfolioChart"></canvas>
-                        </div>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="glass-panel p-6">
+                        <h3 class="text-xl font-bold text-white mb-6 flex items-center tracking-wide"><i data-lucide="award" class="w-6 h-6 mr-2 text-amber-400"></i> AI厳選おすすめランキング20選</h3>
+                        <div class="flex flex-col gap-4" id="portfolio-list"></div>
                     </div>
-
-                    <div class="lg:col-span-3 flex flex-col gap-6" id="portfolio-list"></div>
                 </div>
             </div>
         </div>
 
         <div id="tab-myportfolio" class="tab-content gap-6">
+            <!-- マイ・ポートフォリオ画面は変更なし -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="glass-panel p-6 md:col-span-2 relative overflow-hidden">
                     <div class="absolute -right-10 -bottom-10 opacity-5"><i data-lucide="pie-chart" class="w-64 h-64"></i></div>
@@ -351,81 +339,28 @@
         </div>
     </main>
 
-    <template id="discover-card-template">
-        <div class="glass-panel portfolio-card flex flex-col relative overflow-hidden group">
-            <div class="p-5 flex flex-col md:flex-row justify-between border-b border-slate-700/50 relative z-10">
-                <div class="md:w-1/2 mb-4 md:mb-0">
-                    <div class="flex flex-wrap gap-1.5 mb-3">
-                        <span class="text-[9px] font-bold px-2 py-0.5 rounded border type-badge bg-slate-800/80 backdrop-blur uppercase">種類</span>
-                        <span class="text-[9px] font-bold px-2 py-0.5 rounded border sector-badge bg-slate-800/80 backdrop-blur uppercase"><i data-lucide="tag" class="w-2.5 h-2.5 inline mr-1 -mt-0.5"></i>業種/テーマ</span>
+    <!-- 【NEW】ランキング用のテンプレート -->
+    <template id="ranking-card-template">
+        <div class="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-5 hover:bg-slate-800/60 transition-all group">
+            <div class="flex items-center gap-5 md:w-3/4">
+                <div class="text-4xl font-black text-slate-600 w-12 text-center rank-text en-font group-hover:text-purple-400 transition-colors drop-shadow-lg">1</div>
+                <div class="flex-grow">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded border border-slate-600 bg-slate-800 text-slate-300 sector-badge uppercase tracking-wider">業種</span>
+                        <span class="text-xs font-bold text-amber-400 score-text en-font bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-500/30 shadow-[0_0_10px_rgba(217,119,6,0.2)]">95pt</span>
                     </div>
-                    <div class="flex items-end gap-3 mb-2">
-                        <h4 class="text-4xl font-black text-white ticker-text en-font tracking-tighter leading-none">TICKER</h4>
-                        <span class="text-xl font-bold text-slate-300 current-price-text en-font leading-none pb-0.5">---</span>
+                    <div class="flex items-end gap-3 mb-1">
+                        <h4 class="text-2xl font-black text-white ticker-text en-font leading-none tracking-tight">TICKER</h4>
+                        <p class="text-sm text-slate-300 company-text mb-0.5 font-bold">企業名</p>
                     </div>
-                    <p class="text-xs text-slate-400 company-text mb-3">企業名</p>
-                </div>
-                
-                <div class="md:w-1/2 flex flex-col md:items-end justify-between mt-4 md:mt-0">
-                    <div class="text-right mb-3">
-                        <span class="text-xs font-bold text-slate-500 block tracking-widest">推奨配分</span>
-                        <span class="text-3xl font-black text-purple-400 allocation-text en-font leading-none">0%</span>
-                    </div>
-                    <div class="bg-slate-900/80 border border-slate-700/50 px-3 py-1.5 rounded-lg flex items-center justify-between gap-4 w-full md:w-auto">
-                        <div class="text-left">
-                            <span class="text-[10px] font-bold text-slate-500 block">購入目安額</span>
-                            <span class="text-sm font-bold text-white calculated-budget en-font">¥0</span>
-                        </div>
-                        <div class="bg-slate-800 px-2 py-1 rounded action-text text-xs font-bold text-white border border-slate-600">AI推奨行動</div>
-                    </div>
+                    <p class="text-xs text-slate-400 mt-2 reason-text line-clamp-2 leading-relaxed">推奨理由がここに入ります。</p>
                 </div>
             </div>
-
-            <div class="p-5 flex flex-col lg:flex-row gap-6 relative z-10 bg-slate-900/30">
-                <div class="lg:w-1/2">
-                    <h5 class="text-[11px] font-bold text-slate-400 mb-3 tracking-widest flex items-center"><i data-lucide="git-branch" class="w-3 h-3 mr-1.5"></i>3つの未来シナリオ予測</h5>
-                    <div class="space-y-3">
-                        <div class="relative">
-                            <div class="flex justify-between text-xs mb-1"><span class="text-emerald-400 font-bold">強気シナリオ <span class="text-emerald-500/70 text-[10px] ml-1 bull-target en-font">TARGET</span></span><span class="text-emerald-400 en-font font-bold bull-prob">0%</span></div>
-                            <div class="prob-bar-bg"><div class="prob-bar-fill fill-bull bull-bar" style="width: 0%"></div></div>
-                            <div class="text-[10px] text-slate-400 mt-1 truncate bull-cond"></div>
-                        </div>
-                        <div class="relative">
-                            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300 font-bold">基本シナリオ <span class="text-slate-500 text-[10px] ml-1 base-target en-font">TARGET</span></span><span class="text-slate-300 en-font font-bold base-prob">0%</span></div>
-                            <div class="prob-bar-bg"><div class="prob-bar-fill fill-base base-bar" style="width: 0%"></div></div>
-                            <div class="text-[10px] text-slate-400 mt-1 truncate base-cond"></div>
-                        </div>
-                        <div class="relative">
-                            <div class="flex justify-between text-xs mb-1"><span class="text-red-400 font-bold">弱気シナリオ <span class="text-red-500/70 text-[10px] ml-1 bear-target en-font">TARGET</span></span><span class="text-red-400 en-font font-bold bear-prob">0%</span></div>
-                            <div class="prob-bar-bg"><div class="prob-bar-fill fill-bear bear-bar" style="width: 0%"></div></div>
-                            <div class="text-[10px] text-slate-400 mt-1 truncate bear-cond"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="lg:w-1/2 flex flex-col justify-between">
-                    <div>
-                        <h5 class="text-[11px] font-bold text-blue-400 mb-2 tracking-widest flex items-center"><i data-lucide="cpu" class="w-3 h-3 mr-1.5"></i>AIの分析理由</h5>
-                        <p class="text-xs text-slate-300 leading-relaxed reason-text line-clamp-3 mb-3"></p>
-                    </div>
-                    <div class="bg-slate-900/80 border border-slate-700/50 rounded-xl p-3">
-                        <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-1.5 px-1">
-                            <span class="text-red-400/80">損切: <span class="sl-text text-red-400 font-bold en-font"></span></span>
-                            <span class="text-emerald-400/80">利確: <span class="tp-text text-emerald-400 font-bold en-font"></span></span>
-                        </div>
-                        <div class="rr-meter">
-                            <div class="rr-meter-sl" style="width: 30%;"></div>
-                            <div class="rr-meter-tp" style="width: 70%;"></div>
-                            <div class="rr-meter-current" style="left: 30%;"></div>
-                        </div>
-                    </div>
-                </div>
+            <div class="md:w-1/4 flex justify-end">
+                <button class="deep-scan-btn w-full md:w-auto px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center shadow-lg transform group-hover:scale-105 border border-purple-400/30">
+                    <i data-lucide="fingerprint" class="w-4 h-4 mr-2 text-purple-200"></i> 企業カルテ
+                </button>
             </div>
-            
-            <button class="deep-scan-btn w-full py-4 flex items-center justify-center text-sm font-bold text-purple-300 hover:text-white bg-slate-900/50 hover:bg-purple-900/30 transition-all border-t border-slate-700/50 group">
-                <i data-lucide="fingerprint" class="w-4 h-4 mr-2 group-hover:scale-125 transition-transform text-purple-400"></i>
-                <span class="tracking-wide">企業カルテを開く（詳細分析）</span>
-            </button>
         </div>
     </template>
 
@@ -637,9 +572,7 @@
             }
         });
 
-        let portfolioChartInstance = null;
         let radarChartInstance = null;
-        let currentDiscoverData = [];
         let loadingInterval;
 
         const loadingPanel = document.getElementById('loading-panel');
@@ -775,21 +708,20 @@
             // UIからパーソナライズ設定を取得
             const segment = document.getElementById('setting-segment').value;
             const timeframe = document.getElementById('setting-timeframe').value;
-            const budgetRaw = document.getElementById('setting-budget').value;
+            const priceMin = document.getElementById('setting-price-min').value;
+            const priceMax = document.getElementById('setting-price-max').value;
             const yieldRaw = document.getElementById('setting-yield').value;
             
             // グローバルに保存（Deep Scanでも使用）
-            window.appSettings = { segment, timeframe, budgetRaw, yieldRaw };
-
-            // もし予算が設定されていれば、既存のUIにも反映させる
-            if (budgetRaw && parseInt(budgetRaw) > 0) {
-                document.getElementById('budget-input').value = budgetRaw;
-            }
+            window.appSettings = { segment, timeframe, priceMin, priceMax, yieldRaw };
 
             // プロンプト用の条件テキスト作成
             let conditionText = `検索対象市場: ${segment}\n情報の対象期間: ${timeframe}\n`;
-            if (budgetRaw && parseInt(budgetRaw) > 0) {
-                conditionText += `投資上限額: ${budgetRaw}円（単元株でこの金額以内で買えること）\n`;
+            if (priceMin || priceMax) {
+                conditionText += `1株あたりの株価: `;
+                if(priceMin) conditionText += `${priceMin}円以上 `;
+                if(priceMax) conditionText += `${priceMax}円以下`;
+                conditionText += `\n`;
             }
             if (yieldRaw && parseFloat(yieldRaw) > 0) {
                 conditionText += `条件: 優待利回りまたは配当利回りが ${yieldRaw}% 以上の銘柄を優先\n`;
@@ -799,14 +731,15 @@
             document.getElementById('discover-results').classList.add('hidden');
             errorMsg.classList.add('hidden');
 
-            loadingTitle.textContent = "AI多段思考プロセスを実行中...";
-            loadingText.innerHTML = `ステップ1: ${segment}のトレンドと有望な6銘柄を抽出中...<br><span class='text-xs text-slate-500'>市場全体を俯瞰しています</span>`;
+            loadingTitle.textContent = "AIスキャンを実行中...";
+            loadingText.innerHTML = `市場のトレンドと条件に合う【おすすめ日本株20選】を抽出しています...<br><span class='text-xs text-slate-500'>市場全体を俯瞰し、一括でランキング化します（約15〜30秒）</span>`;
             loadingPanel.classList.remove('hidden');
             loadingPanel.classList.add('flex');
 
             try {
+                // ループ検索を廃止し、1回のAPIコールで20件のランキングを一括取得する
                 const step1Payload = {
-                    contents: [{ parts: [{ text: `以下の検索条件とユーザーの要望に従って、最新の経済ニュースを分析してください。\n\n【検索条件】\n${conditionText}\n\n【指示】\n1. 指定された市場における資金流入(HOT)と流出(COLD)のヒートマップを作成してください。\n2. 条件を満たす、今初心者が買うべき有望な【日本株を厳選して6銘柄】教えてください。\n※ティッカーシンボルは日本の証券コード（例: 7203）のみを出力してください。米国株や他国の銘柄は絶対に含めないでください。` }] }],
+                    contents: [{ parts: [{ text: `以下の検索条件とユーザーの要望に従って、最新の経済ニュースを分析してください。\n\n【検索条件】\n${conditionText}\n\n【指示】\n1. 指定された市場における資金流入(HOT)と流出(COLD)のヒートマップを作成してください。\n2. 条件を満たす、今初心者が買うべき有望な【日本株おすすめランキングTOP20銘柄】を作成してください。\n※ティッカーシンボルは日本の証券コード（例: 7203）のみを出力してください。米国株や他国の銘柄は絶対に含めないでください。` }] }],
                     systemInstruction: { parts: [{ text: "あなたは日本株に特化したプロの証券アナリストです。必ずJSONで出力してください。" }] },
                     tools: [{ google_search: {} }],
                     generationConfig: {
@@ -816,95 +749,45 @@
                             properties: {
                                 marketSignal: { type: "OBJECT", properties: { status: { type: "STRING" }, reason: { type: "STRING" } }, required: ["status", "reason"] },
                                 sectorHeatmap: { type: "ARRAY", items: { type: "OBJECT", properties: { sectorName: { type: "STRING" }, heat: { type: "STRING" }, reason: { type: "STRING" } } } },
-                                selectedTickers: { type: "ARRAY", items: { type: "STRING" }, description: "選ばれた6つの日本の証券コード" }
+                                ranking20: { 
+                                    type: "ARRAY", 
+                                    items: { 
+                                        type: "OBJECT", 
+                                        properties: { 
+                                            rank: { type: "INTEGER" }, 
+                                            ticker: { type: "STRING" }, 
+                                            companyName: { type: "STRING" },
+                                            sector: { type: "STRING" },
+                                            score: { type: "INTEGER", description: "AIによるおすすめ度(100点満点)" },
+                                            reason: { type: "STRING", description: "推奨する理由を1〜2文で簡潔に" }
+                                        },
+                                        required: ["rank", "ticker", "companyName", "sector", "score", "reason"]
+                                    }, 
+                                    description: "おすすめランキング20選" 
+                                }
                             },
-                            required: ["marketSignal", "sectorHeatmap", "selectedTickers"]
+                            required: ["marketSignal", "sectorHeatmap", "ranking20"]
                         }
                     }
                 };
 
                 const step1Result = await callGeminiAPI(step1Payload, 3);
-                const step1Data = JSON.parse(step1Result.candidates[0].content.parts[0].text);
-                const tickersArr = step1Data.selectedTickers.slice(0, 6);
+                const finalData = JSON.parse(step1Result.candidates[0].content.parts[0].text);
 
-                let finalPortfolio = [];
-                let completedCount = 0;
-
-                // 6銘柄を1つずつ個別に検索・分析
-                for (const ticker of tickersArr) {
-                    loadingText.innerHTML = `ステップ2: [ <span class='text-purple-400 font-bold'>${ticker}</span> ] の最新株価とシナリオを検索中...<br><span class='text-xs text-amber-400'>（${completedCount}/${tickersArr.length} 銘柄完了）確実な国内情報を取得しています</span>`;
-                    
-                    const step2Payload = {
-                        contents: [{ parts: [{ text: `日本の証券コード「${ticker}」の企業について、${timeframe}の最新ニュースを検索し、詳細な投資シナリオを作成してください。必ずGoogle検索を利用し、本日の最新の日本円での株価を調べて「currentPrice」に入れてください。` }] }],
-                        systemInstruction: { parts: [{ text: "プロの日本株アナリストとしてJSONで日本語出力してください。" }] },
-                        tools: [{ google_search: {} }],
-                        generationConfig: {
-                            responseMimeType: "application/json",
-                            responseSchema: {
-                                type: "OBJECT",
-                                properties: {
-                                    assetType: { type: "STRING" }, sector: { type: "STRING" },
-                                    ticker: { type: "STRING" }, companyName: { type: "STRING" }, currentPrice: { type: "STRING" },
-                                    allocationPercent: { type: "INTEGER" }, simpleReason: { type: "STRING" }, actionInstruction: { type: "STRING" },
-                                    takeProfit: { type: "STRING" }, stopLoss: { type: "STRING" },
-                                    scenarios: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            bull: { type: "OBJECT", properties: { probability: {type:"INTEGER"}, targetPrice: {type:"STRING"}, condition: {type:"STRING"} }, required:["probability", "targetPrice"] },
-                                            base: { type: "OBJECT", properties: { probability: {type:"INTEGER"}, targetPrice: {type:"STRING"}, condition: {type:"STRING"} }, required:["probability", "targetPrice"] },
-                                            bear: { type: "OBJECT", properties: { probability: {type:"INTEGER"}, targetPrice: {type:"STRING"}, condition: {type:"STRING"} }, required:["probability", "targetPrice"] }
-                                        }
-                                    }
-                                },
-                                required: ["assetType", "sector", "ticker", "companyName", "currentPrice", "allocationPercent", "simpleReason", "actionInstruction", "takeProfit", "stopLoss"]
-                            }
-                        }
-                    };
-
-                    try {
-                        const step2Result = await callGeminiAPI(step2Payload, 3);
-                        const itemData = JSON.parse(step2Result.candidates[0].content.parts[0].text);
-                        finalPortfolio.push(itemData);
-                    } catch (e) {
-                        console.error(`[${ticker}] の詳細分析に失敗しました。スキップします。`, e);
-                    }
-
-                    completedCount++;
-                    if (completedCount < tickersArr.length) {
-                        await new Promise(r => setTimeout(r, 5000));
-                    }
+                if (!finalData.ranking20 || finalData.ranking20.length === 0) {
+                    throw new Error("条件に合致する銘柄が見つかりませんでした。条件（株価や利回りなど）を緩めて再度お試しください。");
                 }
 
-                if (finalPortfolio.length === 0) {
-                    throw new Error("すべての銘柄の分析に失敗しました。時間を置いてやり直してください。");
-                }
-
-                let totalAlloc = finalPortfolio.reduce((sum, item) => sum + (item.allocationPercent || 0), 0);
-                if (totalAlloc === 0) {
-                    finalPortfolio.forEach(item => item.allocationPercent = Math.floor(100 / finalPortfolio.length));
-                } else {
-                    finalPortfolio.forEach(item => {
-                        item.allocationPercent = Math.round(((item.allocationPercent || 0) / totalAlloc) * 100);
-                    });
-                }
-                
-                let newTotal = finalPortfolio.reduce((sum, item) => sum + item.allocationPercent, 0);
-                if (newTotal !== 100 && finalPortfolio.length > 0) {
-                     finalPortfolio[0].allocationPercent += (100 - newTotal);
-                }
-
-                const finalData = { ...step1Data, portfolio: finalPortfolio };
-                currentDiscoverData = finalData.portfolio; 
                 renderDiscoverResults(finalData);
 
             } catch (error) {
-                console.error("スキャン全体エラー:", error);
+                console.error("スキャンエラー:", error);
                 if (error.message.includes("APIキーが無効") || error.message.includes("401")) {
                     errorMsg.innerHTML = `APIキー（パスワード）が間違っています。<br><button onclick="resetApiKey()" class="mt-4 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white font-bold text-sm hover:bg-slate-700 transition-colors inline-flex items-center"><i data-lucide="key" class="w-4 h-4 mr-2"></i> キーを再入力する</button>`;
                 } else if (error.message.includes("429")) {
-                    errorMsg.innerHTML = `AIの処理制限（429エラー）に達しました。無料枠のスピード制限を超えたため、1〜2分待ってから再度お試しください。<br><span class="text-xs text-slate-400 mt-2 block">※6銘柄の連続検索は負荷が高いため、AIに休憩を挟ませています。</span>`;
+                    errorMsg.innerHTML = `AIの処理制限（429エラー）に達しました。1〜2分待ってから再度お試しください。`;
                 } else {
-                    errorMsg.innerHTML = `AIの処理中にエラーが発生しました:<br><span class="text-xs break-all text-red-400 font-mono">${error.message}</span><br><br>時間をおいて再度お試しください。`;
+                    errorMsg.innerHTML = `AIの処理中にエラーが発生しました:<br><span class="text-xs break-all text-red-400 font-mono">${error.message}</span><br><br>条件を少し変えるか、時間をおいて再度お試しください。`;
                 }
                 errorMsg.classList.remove('hidden');
                 document.getElementById('intro-panel').style.display = 'block';
@@ -951,84 +834,44 @@
             const listContainer = document.getElementById('portfolio-list');
             listContainer.innerHTML = '';
             
-            if (data.portfolio) {
-                data.portfolio.sort((a, b) => b.allocationPercent - a.allocationPercent).forEach((item, index) => {
-                    const template = document.getElementById('discover-card-template');
+            if (data.ranking20) {
+                data.ranking20.sort((a, b) => a.rank - b.rank).forEach((item) => {
+                    const template = document.getElementById('ranking-card-template');
                     if(!template) return;
                     const clone = template.content.cloneNode(true);
                     
                     const safeSetClone = (selector, text) => { const el = clone.querySelector(selector); if (el) el.textContent = text || "---"; };
 
-                    safeSetClone('.type-badge', item.assetType);
+                    const rankEl = clone.querySelector('.rank-text');
+                    if (rankEl) {
+                        rankEl.textContent = item.rank;
+                        // TOP3の装飾
+                        if (item.rank === 1) { rankEl.classList.add('text-yellow-400', 'rank-badge-1'); rankEl.classList.remove('text-slate-600'); }
+                        else if (item.rank === 2) { rankEl.classList.add('text-slate-300', 'rank-badge-2'); rankEl.classList.remove('text-slate-600'); }
+                        else if (item.rank === 3) { rankEl.classList.add('text-amber-500', 'rank-badge-3'); rankEl.classList.remove('text-slate-600'); }
+                    }
+
                     const sb = clone.querySelector('.sector-badge');
                     if(sb) sb.innerHTML = `<i data-lucide="tag" class="w-2.5 h-2.5 inline mr-1 -mt-0.5 text-slate-400"></i>${item.sector}`;
+                    
+                    const scoreEl = clone.querySelector('.score-text');
+                    if(scoreEl) scoreEl.innerHTML = `<i data-lucide="star" class="w-3 h-3 inline mr-1"></i>${item.score}pt`;
+
                     safeSetClone('.ticker-text', item.ticker);
                     safeSetClone('.company-text', item.companyName);
-                    safeSetClone('.current-price-text', item.currentPrice);
-                    safeSetClone('.allocation-text', `${item.allocationPercent}%`);
-                    
-                    const budgetEl = clone.querySelector('.calculated-budget');
-                    if(budgetEl) budgetEl.id = `discover-budget-${index}`;
-                    
-                    safeSetClone('.reason-text', item.simpleReason);
-                    safeSetClone('.action-text', item.actionInstruction);
-                    safeSetClone('.tp-text', item.takeProfit);
-                    safeSetClone('.sl-text', item.stopLoss);
-
-                    const cp = extractNumber(item.currentPrice);
-                    const tp = extractNumber(item.takeProfit);
-                    const sl = extractNumber(item.stopLoss);
-                    if (cp > 0 && tp > 0 && sl > 0 && tp > sl) {
-                        const slPercent = Math.max(5, Math.min(95, ((cp - sl) / (tp - sl)) * 100));
-                        const rrSl = clone.querySelector('.rr-meter-sl');
-                        const rrTp = clone.querySelector('.rr-meter-tp');
-                        const rrCur = clone.querySelector('.rr-meter-current');
-                        if(rrSl) rrSl.style.width = `${slPercent}%`;
-                        if(rrTp) rrTp.style.width = `${100 - slPercent}%`;
-                        if(rrCur) rrCur.style.left = `${slPercent}%`;
-                    }
-
-                    if(item.scenarios) {
-                        if(item.scenarios.bull) { safeSetClone('.bull-prob', `${item.scenarios.bull.probability}%`); safeSetClone('.bull-target', item.scenarios.bull.targetPrice); safeSetClone('.bull-cond', item.scenarios.bull.condition); }
-                        if(item.scenarios.base) { safeSetClone('.base-prob', `${item.scenarios.base.probability}%`); safeSetClone('.base-target', item.scenarios.base.targetPrice); safeSetClone('.base-cond', item.scenarios.base.condition); }
-                        if(item.scenarios.bear) { safeSetClone('.bear-prob', `${item.scenarios.bear.probability}%`); safeSetClone('.bear-target', item.scenarios.bear.targetPrice); safeSetClone('.bear-cond', item.scenarios.bear.condition); }
-
-                        setTimeout(() => {
-                            const bullBar = clone.querySelector('.bull-bar'); const baseBar = clone.querySelector('.base-bar'); const bearBar = clone.querySelector('.bear-bar');
-                            if (bullBar && item.scenarios.bull) bullBar.style.width = `${item.scenarios.bull.probability}%`;
-                            if (baseBar && item.scenarios.base) baseBar.style.width = `${item.scenarios.base.probability}%`;
-                            if (bearBar && item.scenarios.bear) bearBar.style.width = `${item.scenarios.bear.probability}%`;
-                        }, 300);
-                    }
+                    safeSetClone('.reason-text', item.reason);
 
                     const deepBtn = clone.querySelector('.deep-scan-btn');
                     if(deepBtn) deepBtn.addEventListener('click', () => openDeepScanModal(item.ticker, item.companyName));
+                    
                     listContainer.appendChild(clone);
                 });
             }
 
-            const canvas = document.getElementById('portfolioChart');
-            if (canvas && data.portfolio) {
-                const ctx = canvas.getContext('2d');
-                if (portfolioChartInstance) portfolioChartInstance.destroy();
-                portfolioChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: data.portfolio.map(i => i.ticker), datasets: [{ data: data.portfolio.map(i => i.allocationPercent), backgroundColor: ['#3b82f6', '#8b5cf6', '#db2777', '#10b981', '#f59e0b', '#06b6d4'], borderColor: 'transparent', borderWidth: 0, hoverOffset: 5 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } } });
-            }
-
-            recalculateBudgets();
             const resContainer = document.getElementById('discover-results');
             resContainer.classList.remove('hidden');
             resContainer.classList.add('flex');
             setTimeout(() => { resContainer.style.opacity = '1'; lucide.createIcons(); }, 100);
-        }
-
-        function recalculateBudgets() {
-            let budget = parseInt(document.getElementById('budget-input').value.replace(/,/g, ''));
-            if (isNaN(budget) || budget <= 0) budget = 0;
-            currentDiscoverData.forEach((item, index) => {
-                const amount = Math.floor(budget * (item.allocationPercent / 100));
-                const el = document.getElementById(`discover-budget-${index}`);
-                if(el) el.textContent = `¥${amount.toLocaleString()}`;
-            });
         }
 
         /* =========================================================
