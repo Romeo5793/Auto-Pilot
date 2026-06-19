@@ -4,28 +4,22 @@
 ========================================================================
   AI AUTO-PILOT - 開発・改修履歴（AI引継ぎ用コンテキスト）
 ========================================================================
-  このファイルはAIとの対話によって反復的に開発された1ファイル完結型のWebアプリです。
-  次回以降の改修時は、このヘッダーコメントを読み込むことでスムーズな引継ぎが可能です。
-
   【 バージョン・改修履歴 】
   - v1~v4: 基礎構築、UIデザイン、パスワードロック、自動修復API通信
   - v5: パフォーマンス最適化（日本株/米国株の選択制、3銘柄へ絞り込み）
-  - v6~v8 (安定性・レート制限対策強化):
-    ・429エラー（1分間/1日制限）を完全回避するためのペナルティリセット機能（強制65秒待機）
-    ・通常時の検索インターバルを20秒に設定
-    ・上限エラー時のメッセージ明確化
-  - v9 (TradingView TSE規約対応):
-    ・東京証券取引所（日本株）のチャート埋め込み制限エラーを回避するため、
-      日本株専用の美しいフォールバックUI（公式サイトへのリンクボタン）を実装。
+  - v6~v8: レート制限対策（429エラー回避のペナルティリセット機能、20秒待機）
+  - v9: TradingView TSE規約対応（日本株専用フォールバックUI実装）
+  - v10: APIキー入力エラー対応（400エラー検知と再入力ボタン）
+  - v11: 通貨表示対応（¥ / $ の自動フォーマット）
+  - v12: 全機能の完全再統合（ベースコードの先祖返りを修正）
+  - v13: API節約機能（1日1回推奨の注意書き、前回履歴の読み込み機能、429上限エラーのハンドリング強化）
+  - v14: エラー判定の修正（検索ツール由来の400エラーをAPIキーエラーと誤認し、自己修復機能が発動しなかった問題を修正）
+  - v15: 株価取得の精度向上（今日の日付を渡し、市場に応じた厳密な株価検索プロンプトを適用）
 
   【 技術スタック & アーキテクチャ 】
-  - Frontend: HTML5, Tailwind CSS (CDN), Vanilla JavaScript
-  - Icons/Charts: Lucide Icons (CDN), Chart.js (CDN)
-  - API: Google Gemini API (自動で利用可能な最新モデルを取得しフォールバック)
-  - Storage (localStorage): autopilot_api_key, autopilot_model, my_assets_v1
-
-  【 今後のユーザー要求・改修アイデア（TODO） 】
-  ・「高配当」「AI関連」などの投資テーマ選択機能の追加
+  - Frontend: HTML5, Tailwind CSS, Vanilla JavaScript
+  - Icons/Charts: Lucide Icons, Chart.js
+  - API: Google Gemini API
 ========================================================================
 -->
 <head>
@@ -55,7 +49,6 @@
         .en-font { font-family: 'Outfit', sans-serif; }
         .tech-font { font-family: 'Space Mono', monospace; letter-spacing: -0.05em; }
 
-        /* 特大実行ボタン */
         .btn-zenith {
             background: linear-gradient(135deg, #2563eb, #9333ea, #db2777);
             background-size: 200% 200%;
@@ -71,7 +64,6 @@
         }
         @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-        /* ガラス風パネル */
         .glass-panel {
             background: var(--panel-bg);
             backdrop-filter: blur(16px);
@@ -87,14 +79,12 @@
             transform: translateY(-2px);
         }
 
-        /* シナリオの確率バー */
         .prob-bar-bg { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); width: 100%; overflow: hidden; }
         .prob-bar-fill { height: 100%; border-radius: 3px; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
         .fill-bull { background: linear-gradient(90deg, #10b981, #34d399); }
         .fill-base { background: linear-gradient(90deg, #64748b, #94a3b8); }
         .fill-bear { background: linear-gradient(90deg, #ef4444, #f87171); }
 
-        /* タイムライン */
         .timeline-container { border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1rem; margin-left: 0.5rem; }
         .timeline-item { position: relative; padding-bottom: 1rem; }
         .timeline-item::before {
@@ -126,14 +116,8 @@
         .heat-warm { background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(249,115,22,0.4)); border-color: rgba(249,115,22,0.5); }
         .heat-cold { background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.4)); border-color: rgba(59,130,246,0.5); }
 
-        .speaking-pulse {
-            animation: speakPulse 1.5s infinite;
-        }
-        @keyframes speakPulse {
-            0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
-        }
+        .speaking-pulse { animation: speakPulse 1.5s infinite; }
+        @keyframes speakPulse { 0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); } 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); } }
 
         .modal-overlay { background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(10px); z-index: 50; }
         .scan-line-modal {
@@ -210,7 +194,7 @@
                     世界中のニュースをAIが瞬時に分析し、<br class="hidden sm:block">
                     今最も安全で利益が狙える「買い銘柄」を発掘します。
                 </p>
-                
+
                 <div class="flex justify-center gap-4 sm:gap-6 mb-8 relative z-10 w-full max-w-md mx-auto">
                     <label class="cursor-pointer flex-1 flex items-center justify-center group bg-slate-900/50 px-4 py-3 rounded-xl border border-slate-700/50 hover:bg-slate-800 transition-all">
                         <input type="radio" name="market-type" value="jp" class="hidden peer" checked>
@@ -228,11 +212,17 @@
                         <span class="text-sm md:text-base font-bold text-slate-400 peer-checked:text-white transition-colors tracking-wide whitespace-nowrap">🇺🇸 米国株 (3銘柄)</span>
                     </label>
                 </div>
-
+                
                 <button onclick="startAutoPilotMultiStep()" class="btn-zenith text-white text-2xl font-black px-12 py-6 rounded-full inline-flex items-center justify-center w-full md:w-auto shadow-2xl">
                     <i data-lucide="sparkles" class="w-8 h-8 mr-3"></i> 市場全体をスキャンする
                 </button>
-                <p class="mt-8 text-sm text-slate-500">※API制限回避のため、1銘柄ごとに20秒の待機時間を設けています。（約2分かかります）</p>
+                <p class="mt-8 text-sm text-red-400 font-bold tracking-wide">※【注意】このスキャンは大量のAPI枠を消費するため、1日1回の実行を推奨します。</p>
+                <p class="mt-2 text-sm text-slate-500">※確実性を重視し、1銘柄ずつ丁寧に検索・分析します（約1分半かかります）</p>
+
+                <!-- 【v13】履歴表示ボタン (JavaScriptで表示制御) -->
+                <button id="load-history-btn" onclick="loadLastScanResult()" class="hidden mt-6 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-6 py-3 rounded-xl text-sm font-bold transition-all items-center justify-center mx-auto shadow-lg hover:text-white">
+                    <i data-lucide="history" class="w-4 h-4 mr-2 text-blue-400"></i> APIを消費せずに前回のスキャン結果を見る
+                </button>
             </div>
 
             <div id="discover-results" class="hidden flex-col gap-8 opacity-0 transition-opacity duration-1000">
@@ -513,7 +503,7 @@
 
                 <div id="modal-content-data" class="hidden flex-col gap-8">
 
-                    <!-- 【v9】リアルタイム折れ線グラフ (日本株はフォールバックUIを表示) -->
+                    <!-- TradingViewグラフ or フォールバックUI -->
                     <div class="w-full h-[300px] md:h-[400px] rounded-2xl overflow-hidden border border-slate-700/50 bg-[#131722] shadow-[0_0_20px_rgba(0,0,0,0.5)]" id="tv-chart-container">
                     </div>
 
@@ -589,9 +579,7 @@
         </div>
     </div>
 
-    <!-- ===== スクリプト ===== -->
     <script>
-        // --- 認証（パスワード）システム ---
         let apiKey = localStorage.getItem('autopilot_api_key') || "";
 
         function checkAuth() {
@@ -620,8 +608,19 @@
             location.reload();
         }
 
+        // 【v13】履歴ボタンの表示制御
+        function checkHistory() {
+            const historyData = localStorage.getItem('autopilot_last_scan');
+            const btn = document.getElementById('load-history-btn');
+            if (historyData && btn) {
+                btn.classList.remove('hidden');
+                btn.classList.add('inline-flex');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             checkAuth(); 
+            checkHistory(); // 起動時に履歴の有無をチェック
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             } else {
@@ -672,7 +671,7 @@
             const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
             const response = await fetch(url);
             if (!response.ok) {
-                if (response.status === 401) throw new Error("APIキーが無効です");
+                if (response.status === 401 || response.status === 400) throw new Error("APIキーが無効、または形式が正しくありません");
                 throw new Error(`モデル一覧の取得に失敗しました (${response.status})`);
             }
             const data = await response.json();
@@ -709,7 +708,6 @@
                     let response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
                     if (response.status === 404) {
-                        console.log(`モデル ${model} が見つかりません。最新のモデルを再取得します...`);
                         model = await getAvailableModel();
                         localStorage.setItem('autopilot_model', model);
                         url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -723,16 +721,12 @@
                     }
 
                     if (response.status === 401) throw new Error("APIキーが無効です");
-                    
-                    if (response.status === 429) {
-                        throw new Error("429 Too Many Requests");
-                    }
+                    if (response.status === 429) throw new Error("429 Too Many Requests");
 
                     const errText = await response.text();
                     console.warn(`[${model}] 通信エラー (試行 ${i+1}/${retries}):`, errText);
 
                     if ((response.status === 400 || response.status === 403) && payload.tools) {
-                        console.log(`[${model}] 検索ツールを無効化して自己修復実行...`);
                         const fallbackPayload = { ...payload };
                         delete fallbackPayload.tools;
                         const fbResponse = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fallbackPayload) });
@@ -746,13 +740,11 @@
                     throw new Error(`APIエラー (${response.status})`);
                 } catch (e) {
                     lastError = e;
-                    if (e.message.includes("APIキーが無効")) throw e;
+                    if (e.message.includes("APIキーが無効") || e.message.includes("形式が正しくありません")) throw e;
                     
                     if (i < retries - 1) {
                         const isRateLimit = e.message.includes("429");
                         const waitTime = isRateLimit ? 65000 : defaultDelays[i];
-                        
-                        console.log(`負荷回避のため ${waitTime/1000}秒待機して再試行します...`);
                         
                         if (isRateLimit && document.getElementById('loading-text')) {
                             const loadingTextEl = document.getElementById('loading-text');
@@ -776,6 +768,19 @@
             return isNaN(num) ? 0 : num;
         }
 
+        function formatCurrency(value, ticker) {
+            if (value === undefined || value === null || value === "---" || value === "未取得") return value || "---";
+            const num = extractNumber(value);
+            if (num === 0 && typeof value === 'string' && !/[0-9]/.test(value)) return value;
+            
+            const isJP = /^\d{4}/.test(ticker);
+            if (isJP) {
+                return `¥${num.toLocaleString('ja-JP')}`;
+            } else {
+                return `$${num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            }
+        }
+
         function safeSetText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text || "---"; }
 
         async function startAutoPilotMultiStep() {
@@ -785,12 +790,13 @@
 
             const marketType = document.querySelector('input[name="market-type"]:checked').value;
             let marketPrompt = "";
+            const today = new Date().toLocaleDateString('ja-JP');
             
             if (marketType === "jp") {
-                marketPrompt = "今初心者が買うべき有望な【日本株を3銘柄】厳選して教えてください。ティッカーシンボルは「7203」のように4桁の数字で出力してください。";
+                marketPrompt = `本日は ${today} です。今初心者が買うべき有望な【日本株を3銘柄】厳選して教えてください。ティッカーシンボルは「7203」のように4桁の数字で出力してください。`;
                 loadingText.innerHTML = "ステップ1: 日本市場のトレンドと有望な3銘柄を抽出中...<br><span class='text-xs text-slate-500'>国内市場全体を俯瞰しています</span>";
             } else {
-                marketPrompt = "今初心者が買うべき有望な【米国株を3銘柄】厳選して教えてください。ティッカーシンボルは「AAPL」のようにアルファベットで出力してください。";
+                marketPrompt = `本日は ${today} です。今初心者が買うべき有望な【米国株を3銘柄】厳選して教えてください。ティッカーシンボルは「AAPL」のようにアルファベットで出力してください。`;
                 loadingText.innerHTML = "ステップ1: 米国市場のトレンドと有望な3銘柄を抽出中...<br><span class='text-xs text-slate-500'>米国市場全体を俯瞰しています</span>";
             }
 
@@ -829,8 +835,12 @@
                     const ticker = tickersArr[idx];
                     loadingText.innerHTML = `ステップ2: [ <span class='text-purple-400 font-bold'>${ticker}</span> ] の最新株価とシナリオを検索中...<br><span class='text-xs text-amber-400'>（${completedCount}/${tickersArr.length} 銘柄完了）確実な情報を取得しています</span>`;
                     
+                    let pricePrompt = marketType === "jp" 
+                        ? `必ずGoogle検索を利用して「${ticker} 株価」と検索し、Google Finance等の情報から【${today}時点の最新の日本円の株価(現在値)】を正確に調べて「currentPrice」に入れてください。`
+                        : `必ずGoogle検索を利用して「${ticker} stock price」と検索し、Google Finance等の情報から【${today}時点の最新の米ドルの株価(現在値)】を正確に調べて「currentPrice」に入れてください。`;
+
                     const step2Payload = {
-                        contents: [{ parts: [{ text: `銘柄「${ticker}」について最新ニュースを検索し、詳細な投資シナリオを作成してください。必ずGoogle検索を利用し、本日の最新株価(現在値)を正確に調べて「currentPrice」に入れてください。` }] }],
+                        contents: [{ parts: [{ text: `本日は ${today} です。銘柄「${ticker}」について最新ニュースを検索し、詳細な投資シナリオを作成してください。${pricePrompt} ターゲット価格などもその現在値を基準に現実的な数値を設定してください。` }] }],
                         systemInstruction: { parts: [{ text: "プロのアナリストとしてJSONで日本語出力してください。" }] },
                         tools: [{ google_search: {} }],
                         generationConfig: {
@@ -893,16 +903,21 @@
                      finalPortfolio[0].allocationPercent += (100 - newTotal);
                 }
 
-                const finalData = { ...step1Data, portfolio: finalPortfolio };
+                const finalData = { ...step1Data, portfolio: finalPortfolio, timestamp: Date.now() };
+                
+                // 【v13】スキャン結果を履歴として保存
+                localStorage.setItem('autopilot_last_scan', JSON.stringify(finalData));
+                checkHistory(); // ボタンを再評価
+
                 currentDiscoverData = finalData.portfolio; 
                 renderDiscoverResults(finalData);
 
             } catch (error) {
                 console.error("スキャン全体エラー:", error);
-                if (error.message.includes("APIキーが無効") || error.message.includes("401")) {
-                    errorMsg.innerHTML = `APIキー（パスワード）が間違っています。<br><button onclick="resetApiKey()" class="mt-4 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white font-bold text-sm hover:bg-slate-700 transition-colors inline-flex items-center"><i data-lucide="key" class="w-4 h-4 mr-2"></i> キーを再入力する</button>`;
+                if (error.message.includes("APIキーが無効") || error.message.includes("401") || error.message.includes("形式が正しくありません")) {
+                    errorMsg.innerHTML = `APIキーの形式が正しくありません（コピーミス等の可能性）。<br><button onclick="resetApiKey()" class="mt-4 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white font-bold text-sm hover:bg-slate-700 transition-colors inline-flex items-center"><i data-lucide="key" class="w-4 h-4 mr-2"></i> キーを再入力する</button>`;
                 } else if (error.message.includes("429")) {
-                    errorMsg.innerHTML = `AIの処理制限（429エラー）に達しました。<br>システム側で最大限の回避・復旧を試みましたが、無料枠の限界（1日の利用上限など）を超えてしまいました。<br><span class="text-xs text-slate-400 mt-2 block">対策: 数時間置いてから再度お試しいただくか、別のGoogleアカウントで新しいAPIキーを発行してください。</span>`;
+                    errorMsg.innerHTML = `AIの処理制限（429エラー）に達しました。<br>システム側で最大限の回避・復旧を試みましたが、無料枠の限界を超えてしまいました。<br><span class="text-xs text-slate-400 mt-2 block">対策: 明日再度お試しいただくか、別のAPIキーをご用意ください。</span>`;
                 } else {
                     errorMsg.innerHTML = `AIの処理中にエラーが発生しました:<br><span class="text-xs break-all text-red-400 font-mono">${error.message}</span><br><br>時間をおいて再度お試しください。`;
                 }
@@ -912,6 +927,21 @@
             } finally {
                 loadingPanel.classList.add('hidden');
                 loadingPanel.classList.remove('flex');
+            }
+        }
+
+        // 【v13】前回のスキャン結果を読み込む処理
+        function loadLastScanResult() {
+            const historyStr = localStorage.getItem('autopilot_last_scan');
+            if (historyStr) {
+                try {
+                    const finalData = JSON.parse(historyStr);
+                    currentDiscoverData = finalData.portfolio;
+                    document.getElementById('intro-panel').style.display = 'none';
+                    renderDiscoverResults(finalData);
+                } catch(e) {
+                    console.error("履歴の読み込みに失敗しました", e);
+                }
             }
         }
 
@@ -964,7 +994,7 @@
                     if(sb) sb.innerHTML = `<i data-lucide="tag" class="w-2.5 h-2.5 inline mr-1 -mt-0.5 text-slate-400"></i>${item.sector}`;
                     safeSetClone('.ticker-text', item.ticker);
                     safeSetClone('.company-text', item.companyName);
-                    safeSetClone('.current-price-text', item.currentPrice);
+                    safeSetClone('.current-price-text', formatCurrency(item.currentPrice, item.ticker));
                     safeSetClone('.allocation-text', `${item.allocationPercent}%`);
                     
                     const budgetEl = clone.querySelector('.calculated-budget');
@@ -972,8 +1002,8 @@
                     
                     safeSetClone('.reason-text', item.simpleReason);
                     safeSetClone('.action-text', item.actionInstruction);
-                    safeSetClone('.tp-text', item.takeProfit);
-                    safeSetClone('.sl-text', item.stopLoss);
+                    safeSetClone('.tp-text', formatCurrency(item.takeProfit, item.ticker));
+                    safeSetClone('.sl-text', formatCurrency(item.stopLoss, item.ticker));
 
                     const cp = extractNumber(item.currentPrice);
                     const tp = extractNumber(item.takeProfit);
@@ -989,9 +1019,9 @@
                     }
 
                     if(item.scenarios) {
-                        if(item.scenarios.bull) { safeSetClone('.bull-prob', `${item.scenarios.bull.probability}%`); safeSetClone('.bull-target', item.scenarios.bull.targetPrice); safeSetClone('.bull-cond', item.scenarios.bull.condition); }
-                        if(item.scenarios.base) { safeSetClone('.base-prob', `${item.scenarios.base.probability}%`); safeSetClone('.base-target', item.scenarios.base.targetPrice); safeSetClone('.base-cond', item.scenarios.base.condition); }
-                        if(item.scenarios.bear) { safeSetClone('.bear-prob', `${item.scenarios.bear.probability}%`); safeSetClone('.bear-target', item.scenarios.bear.targetPrice); safeSetClone('.bear-cond', item.scenarios.bear.condition); }
+                        if(item.scenarios.bull) { safeSetClone('.bull-prob', `${item.scenarios.bull.probability}%`); safeSetClone('.bull-target', formatCurrency(item.scenarios.bull.targetPrice, item.ticker)); safeSetClone('.bull-cond', item.scenarios.bull.condition); }
+                        if(item.scenarios.base) { safeSetClone('.base-prob', `${item.scenarios.base.probability}%`); safeSetClone('.base-target', formatCurrency(item.scenarios.base.targetPrice, item.ticker)); safeSetClone('.base-cond', item.scenarios.base.condition); }
+                        if(item.scenarios.bear) { safeSetClone('.bear-prob', `${item.scenarios.bear.probability}%`); safeSetClone('.bear-target', formatCurrency(item.scenarios.bear.targetPrice, item.ticker)); safeSetClone('.bear-cond', item.scenarios.bear.condition); }
 
                         setTimeout(() => {
                             const bullBar = clone.querySelector('.bull-bar'); const baseBar = clone.querySelector('.base-bar'); const bearBar = clone.querySelector('.bear-bar');
@@ -1032,7 +1062,7 @@
         }
 
         /* =========================================================
-           機能2: マイ・ポートフォリオ
+           マイ・ポートフォリオ機能
         ========================================================= */
         function getMyAssets() { return JSON.parse(localStorage.getItem('my_assets_v1') || '[]'); }
         function saveMyAssets(assets) { localStorage.setItem('my_assets_v1', JSON.stringify(assets)); }
@@ -1074,7 +1104,7 @@
                 const safeSetClone = (selector, text) => { const el = clone.querySelector(selector); if (el) el.textContent = text || "---"; };
                 
                 safeSetClone('.ticker-text', asset.ticker);
-                safeSetClone('.buy-price-text', asset.buyPrice > 0 ? asset.buyPrice : '未設定');
+                safeSetClone('.buy-price-text', asset.buyPrice > 0 ? formatCurrency(asset.buyPrice, asset.ticker) : '未設定');
                 safeSetClone('.shares-text', asset.shares > 0 ? asset.shares : '未設定');
                 totalInvested += (asset.buyPrice * asset.shares);
 
@@ -1147,8 +1177,8 @@
 
             } catch (error) {
                 console.error("ポートフォリオスキャンエラー:", error);
-                if (error.message.includes("APIキーが無効")) {
-                    errorMsg.innerHTML = `APIキー（パスワード）が間違っています。<br><button onclick="resetApiKey()" class="mt-4 text-purple-400 underline font-bold text-sm hover:text-purple-300">キーを再入力する</button>`;
+                if (error.message.includes("APIキーが無効") || error.message.includes("形式が正しくありません")) {
+                    errorMsg.innerHTML = `APIキーの形式が正しくありません。<br><button onclick="resetApiKey()" class="mt-4 text-purple-400 underline font-bold text-sm hover:text-purple-300">キーを再入力する</button>`;
                 } else {
                     errorMsg.innerHTML = `スキャンに失敗しました:<br><span class="text-xs break-all text-red-400 font-mono">${error.message}</span>`;
                 }
@@ -1189,7 +1219,7 @@
         }
 
         /* =========================================================
-           機能3: 企業カルテ (Deep Scan)
+           企業カルテ (Deep Scan)
         ========================================================= */
         async function openDeepScanModal(ticker, companyName) {
             safeSetText('modal-title', ticker);
@@ -1202,37 +1232,29 @@
             modal.classList.remove('hidden');
             setTimeout(() => modal.classList.add('opacity-100'), 10);
 
-            // 【v9】日本株判定とフォールバックUIの実装
             let tvTicker = ticker;
-            let isJapanStock = false;
-            
             if (/^\d{4}$/.test(ticker)) {
                 tvTicker = `TSE:${ticker}`;
-                isJapanStock = true;
             } else if (/^\d{4}\.T$/i.test(ticker)) {
                 tvTicker = `TSE:${ticker.replace(/\.T$/i, '')}`;
-                isJapanStock = true;
             }
 
             const tvContainer = document.getElementById('tv-chart-container');
             if(tvContainer) {
-                if (isJapanStock) {
-                    // 日本株の場合は外部リンクセルを表示
+                if (tvTicker.startsWith('TSE:')) {
+                    const jpCode = tvTicker.replace('TSE:', '');
                     tvContainer.innerHTML = `
-                        <div class="w-full h-full flex flex-col items-center justify-center bg-[#0f172a] text-slate-300 p-6 text-center border-2 border-dashed border-slate-700/50 rounded-2xl">
-                            <div class="bg-slate-800/50 p-4 rounded-full mb-4">
-                                <i data-lucide="line-chart" class="w-10 h-10 text-slate-400"></i>
-                            </div>
-                            <h3 class="text-lg font-bold text-white mb-2 tracking-wider">日本株チャートは外部表示となります</h3>
-                            <p class="text-xs text-slate-400 mb-6 max-w-sm leading-relaxed">東京証券取引所（TSE）のデータ規約により、日本株のリアルタイムチャートは外部サイトへの埋め込みが制限されています。</p>
-                            <a href="https://jp.tradingview.com/symbols/${tvTicker}/" target="_blank" rel="noopener noreferrer" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] flex items-center transform hover:-translate-y-1">
-                                <i data-lucide="external-link" class="w-4 h-4 mr-2"></i> TradingView公式サイトで開く
+                        <div class="w-full h-full flex flex-col items-center justify-center bg-slate-900 border border-slate-700/50 relative overflow-hidden p-6">
+                            <i data-lucide="line-chart" class="w-16 h-16 text-slate-600 mb-4 opacity-50"></i>
+                            <h4 class="text-white font-bold mb-2">チャートの表示制限</h4>
+                            <p class="text-xs text-slate-400 text-center max-w-sm mb-6 leading-relaxed">東京証券取引所の規約により、日本株のリアルタイムチャートは外部サイトへの直接埋め込みが制限されています。</p>
+                            <a href="https://finance.yahoo.co.jp/quote/${jpCode}.T" target="_blank" rel="noopener noreferrer" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center shadow-lg shadow-purple-900/50">
+                                <i data-lucide="external-link" class="w-4 h-4 mr-2"></i> Yahoo!ファイナンスで確認する
                             </a>
                         </div>
                     `;
-                    setTimeout(() => lucide.createIcons(), 50);
+                    lucide.createIcons();
                 } else {
-                    // 米国株などは通常通りiframeで表示
                     tvContainer.innerHTML = `<iframe src="https://s.tradingview.com/widgetembed/?symbol=${tvTicker}&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=131722&theme=dark&style=3&timezone=Asia%2FTokyo&locale=ja" width="100%" height="100%" frameborder="0" allowtransparency="true" scrolling="no" allowfullscreen=""></iframe>`;
                 }
             }
@@ -1242,9 +1264,11 @@
             if(loadingInterval) clearInterval(loadingInterval);
             loadingInterval = setInterval(() => { safeSetText('modal-loading-text', loadingTexts[ltIdx % loadingTexts.length]); ltIdx++; }, 1500);
 
+            const today = new Date().toLocaleDateString('ja-JP');
+
             try {
                 const payload = {
-                    contents: [{ parts: [{ text: `銘柄「${ticker}」について深くGoogle検索し、以下の情報を完全な日本語でJSON出力してください。
+                    contents: [{ parts: [{ text: `本日は ${today} です。銘柄「${ticker}」について深くGoogle検索し、以下の情報を完全な日本語でJSON出力してください。必ず【${today}の最新株価】を検索して基準にし、現実的なシナリオ価格を算出してください。
 1. 専門家AIチームの議論と最終判断
 2. 3つの未来シナリオ(Bull/Base/Bear)とその発生確率・ターゲット価格
 3. 今後数ヶ月の注目イベント(カタリスト)のタイムライン
@@ -1307,9 +1331,9 @@
                 }
 
                 if(data.scenarios) {
-                    if(data.scenarios.bull) { safeSetText('modal-bull-target', data.scenarios.bull.targetPrice); safeSetText('modal-bull-prob-txt', `${data.scenarios.bull.probability}%`); safeSetText('modal-bull-cond', data.scenarios.bull.condition); }
-                    if(data.scenarios.base) { safeSetText('modal-base-target', data.scenarios.base.targetPrice); safeSetText('modal-base-prob-txt', `${data.scenarios.base.probability}%`); safeSetText('modal-base-cond', data.scenarios.base.condition); }
-                    if(data.scenarios.bear) { safeSetText('modal-bear-target', data.scenarios.bear.targetPrice); safeSetText('modal-bear-prob-txt', `${data.scenarios.bear.probability}%`); safeSetText('modal-bear-cond', data.scenarios.bear.condition); }
+                    if(data.scenarios.bull) { safeSetText('modal-bull-target', formatCurrency(data.scenarios.bull.targetPrice, ticker)); safeSetText('modal-bull-prob-txt', `${data.scenarios.bull.probability}%`); safeSetText('modal-bull-cond', data.scenarios.bull.condition); }
+                    if(data.scenarios.base) { safeSetText('modal-base-target', formatCurrency(data.scenarios.base.targetPrice, ticker)); safeSetText('modal-base-prob-txt', `${data.scenarios.base.probability}%`); safeSetText('modal-base-cond', data.scenarios.base.condition); }
+                    if(data.scenarios.bear) { safeSetText('modal-bear-target', formatCurrency(data.scenarios.bear.targetPrice, ticker)); safeSetText('modal-bear-prob-txt', `${data.scenarios.bear.probability}%`); safeSetText('modal-bear-cond', data.scenarios.bear.condition); }
                     
                     setTimeout(() => {
                         const bullBar = document.getElementById('modal-bull-bar'); const baseBar = document.getElementById('modal-base-bar'); const bearBar = document.getElementById('modal-bear-bar');
@@ -1346,9 +1370,12 @@
                 document.getElementById('modal-loading').classList.add('hidden');
                 const modalErrMsg = document.getElementById('modal-error-message');
                 if (modalErrMsg) { 
-                    if (error.message.includes("APIキーが無効")) {
-                        modalErrMsg.innerHTML = `APIキー（パスワード）が間違っています。<br><button onclick="resetApiKey()" class="mt-3 px-3 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg text-white font-bold text-xs hover:bg-red-800 transition-colors inline-flex items-center"><i data-lucide="key" class="w-3 h-3 mr-1"></i> キーを再入力</button>`; 
+                    if (error.message.includes("APIキーが無効") || error.message.includes("形式が正しくありません")) {
+                        modalErrMsg.innerHTML = `APIキーの形式が正しくありません。<br><button onclick="resetApiKey()" class="mt-3 px-3 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg text-white font-bold text-xs hover:bg-red-800 transition-colors inline-flex items-center"><i data-lucide="key" class="w-3 h-3 mr-1"></i> キーを再入力</button>`; 
                         lucide.createIcons();
+                    } else if (error.message.includes("429")) {
+                        // 【v13】企業カルテでの429エラー（1日上限）に対する親切なメッセージ
+                        modalErrMsg.innerHTML = `企業カルテの生成に失敗しました（429エラー）。<br>本日のAPI無料枠の上限に達した可能性が高いです。<br>恐れ入りますが、明日再度お試しいただくか、別のAPIキーをご利用ください。`;
                     } else {
                         modalErrMsg.innerHTML = `企業カルテの生成に失敗しました:<br><span class="text-xs break-all text-red-400 font-mono">${error.message}</span>`; 
                     }
