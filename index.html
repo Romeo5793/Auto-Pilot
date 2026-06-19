@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI AUTO-PILOT (Japan Edition v2)</title>
+    <title>AI AUTO-PILOT (Japan Edition v5)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -105,7 +105,7 @@
 </head>
 <body class="min-h-screen flex flex-col relative">
 
-    <!-- Auth Overlay -->
+    <!-- Auth Overlay (API Key) -->
     <div id="auth-overlay" class="fixed inset-0 bg-[#020617] z-[100] hidden items-center justify-center p-4 backdrop-blur-xl">
         <div class="glass-panel p-8 max-w-md w-full text-center relative overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-slate-700">
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
@@ -234,10 +234,31 @@
                     </div>
                 </div>
                 
-                <button onclick="startAutoPilotMultiStep()" class="btn-zenith text-white text-2xl font-black px-12 py-8 rounded-full inline-flex items-center justify-center w-full md:w-auto shadow-2xl relative z-10">
+                <button onclick="startAutoPilotMultiStep(false)" class="btn-zenith text-white text-2xl font-black px-12 py-8 rounded-full inline-flex items-center justify-center w-full md:w-auto shadow-2xl relative z-10">
                     <i data-lucide="sparkles" class="w-8 h-8 mr-3"></i> AIおすすめ20選を抽出する
                 </button>
                 <p class="mt-8 text-sm text-slate-500 relative z-10">※条件に合う日本株トップ20を高速でランキング化します（約15〜30秒）</p>
+
+                <!-- 保存済み市場スキャン履歴エリア -->
+                <div id="saved-scan-area" class="mt-8 w-full max-w-4xl mx-auto hidden relative z-10 text-left">
+                    <h3 class="text-sm font-bold text-slate-400 mb-3 flex items-center tracking-wide">
+                        <i data-lucide="history" class="w-4 h-4 mr-2"></i> 前回のスキャン結果
+                    </h3>
+                    <div class="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-4 hover:bg-slate-800/50 transition-colors">
+                        <div>
+                            <div class="text-[10px] text-slate-500 mb-1">前回更新: <span id="saved-scan-date" class="text-slate-300 font-bold en-font ml-1"></span></div>
+                            <div id="saved-scan-conditions" class="text-xs text-slate-400 line-clamp-2 leading-relaxed"></div>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="loadSavedScan()" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold py-2.5 px-4 rounded-lg transition-colors border border-slate-600 flex justify-center items-center whitespace-nowrap">
+                                <i data-lucide="book-open" class="w-3 h-3 mr-1.5"></i> 開く
+                            </button>
+                            <button onclick="startAutoPilotMultiStep(true)" class="flex-1 sm:flex-none bg-purple-900/40 hover:bg-purple-800/60 text-purple-300 text-xs font-bold py-2.5 px-4 rounded-lg transition-colors border border-purple-500/40 flex justify-center items-center whitespace-nowrap group-hover:shadow-[0_0_10px_rgba(168,85,247,0.3)]">
+                                <i data-lucide="refresh-cw" class="w-3 h-3 mr-1.5 text-purple-400"></i> 差分更新
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div id="discover-results" class="hidden flex-col gap-8 opacity-0 transition-opacity duration-1000">
@@ -338,6 +359,20 @@
                 <p class="text-lg font-bold text-slate-400 mb-2">保有銘柄がありません</p>
                 <p class="text-sm">上のフォームからあなたが保有している銘柄を登録してください。</p>
             </div>
+
+            <!-- 保存済みカルテセクション -->
+            <div class="glass-panel p-6 mt-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-white flex items-center tracking-wide"><i data-lucide="folder-search" class="w-6 h-6 mr-2 text-purple-400"></i> 保存済み企業カルテ</h3>
+                </div>
+                <div id="saved-reports-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- JSでレンダリング -->
+                </div>
+                <div id="saved-reports-empty" class="text-center text-slate-500 py-12 bg-slate-900/30 rounded-xl border border-slate-700/50 hidden">
+                    <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-3 text-slate-600"></i>
+                    <p class="text-sm">保存された企業カルテはありません。<br>「新規発掘」やポートフォリオからカルテを開くと自動保存されます。</p>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -358,10 +393,14 @@
                     <p class="text-xs text-slate-400 mt-2 reason-text line-clamp-2 leading-relaxed">推奨理由がここに入ります。</p>
                 </div>
             </div>
-            <div class="md:w-1/4 flex justify-end">
-                <button class="deep-scan-btn w-full md:w-auto px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center shadow-lg transform group-hover:scale-105 border border-purple-400/30">
+            <div class="md:w-1/4 flex flex-col gap-2 justify-center">
+                <button class="deep-scan-btn w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center shadow-lg transform hover:scale-105 border border-purple-400/30">
                     <i data-lucide="fingerprint" class="w-4 h-4 mr-2 text-purple-200"></i> 企業カルテ
                 </button>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="benefit-link-btn w-full px-4 py-2 bg-slate-800/80 hover:bg-slate-700 text-amber-400 rounded-xl text-xs font-bold transition-all flex items-center justify-center border border-slate-600 hover:border-amber-500/50">
+                    <i data-lucide="gift" class="w-3 h-3 mr-2"></i> 優待・詳細 <span class="opacity-70 ml-1 text-[10px]">(Yahoo!)</span>
+                    <i data-lucide="external-link" class="w-3 h-3 ml-1 opacity-50"></i>
+                </a>
             </div>
         </div>
     </template>
@@ -399,17 +438,48 @@
                     <p class="text-xs text-slate-300 leading-relaxed advice-text line-clamp-3">「全体をAI診断する」ボタンを押してください。</p>
                 </div>
                 
-                <div class="mt-auto pt-4 border-t border-slate-700/50">
+                <div class="mt-auto pt-4 border-t border-slate-700/50 flex flex-col gap-2">
                     <button class="why-moved-btn w-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg py-2 text-xs font-bold transition-colors flex items-center justify-center">
                         <i data-lucide="zap" class="w-3 h-3 mr-2 text-amber-400"></i> なぜ動いた？（最新ニュース解説）
                     </button>
                     <div class="why-moved-result hidden mt-3 p-3 bg-slate-900/80 rounded-lg border border-slate-700 text-[11px] text-slate-300 leading-relaxed"></div>
+                    <a href="#" target="_blank" rel="noopener noreferrer" class="benefit-link-btn w-full bg-slate-800/50 hover:bg-slate-700 text-amber-400 border border-slate-600 hover:border-amber-500/50 rounded-lg py-2 text-xs font-bold transition-colors flex items-center justify-center">
+                        <i data-lucide="gift" class="w-3 h-3 mr-2"></i> 優待・詳細を見る <span class="opacity-70 ml-1 text-[10px]">(Yahoo!)</span>
+                        <i data-lucide="external-link" class="w-3 h-3 ml-1 opacity-50"></i>
+                    </a>
                 </div>
             </div>
             
-            <button class="deep-scan-btn w-full py-3 bg-slate-900/80 hover:bg-purple-900/30 text-purple-400 hover:text-purple-300 border-t border-slate-700/50 text-[11px] font-bold transition-all flex items-center justify-center tracking-widest">
+            <button class="deep-scan-btn w-full py-3 bg-slate-900/80 hover:bg-purple-900/30 text-purple-400 hover:text-purple-300 border-t border-slate-700/50 text-[11px] font-bold transition-all flex items-center justify-center tracking-widest mt-2">
                 <i data-lucide="search" class="w-3 h-3 mr-2"></i> 企業カルテを開く
             </button>
+        </div>
+    </template>
+
+    <!-- 保存済みカルテ用のテンプレート -->
+    <template id="saved-report-card-template">
+        <div class="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 relative group hover:bg-slate-800/50 transition-colors shadow-lg">
+            <button class="delete-report-btn absolute top-3 right-3 text-slate-500 hover:text-red-400 transition-colors bg-slate-900/80 p-1.5 rounded-full border border-slate-700/50"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-900/50 to-pink-900/50 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-inner">
+                    <i data-lucide="fingerprint" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h4 class="text-xl font-black text-white en-font ticker-text leading-none tracking-tight">TICKER</h4>
+                    <p class="text-[10px] text-slate-400 company-text mt-1 font-bold line-clamp-1">企業名</p>
+                </div>
+            </div>
+            <div class="text-[10px] text-slate-500 mb-4 bg-slate-950/50 p-2 rounded border border-slate-800">
+                前回更新: <span class="last-update-text text-slate-300 font-bold en-font ml-1">YYYY/MM/DD</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+                <button class="open-report-btn bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold py-2.5 rounded-lg transition-colors border border-slate-600 flex justify-center items-center">
+                    <i data-lucide="book-open" class="w-3 h-3 mr-1.5"></i> 開く
+                </button>
+                <button class="update-report-btn bg-purple-900/40 hover:bg-purple-800/60 text-purple-300 text-xs font-bold py-2.5 rounded-lg transition-colors border border-purple-500/40 flex justify-center items-center group-hover:shadow-[0_0_10px_rgba(168,85,247,0.3)]">
+                    <i data-lucide="refresh-cw" class="w-3 h-3 mr-1.5 text-purple-400"></i> 差分更新
+                </button>
+            </div>
         </div>
     </template>
 
@@ -537,6 +607,9 @@
         // --- 設定値のグローバル保存用 ---
         window.appSettings = null;
 
+        // セッションキャッシュ（画面を開いている間の一時保存）
+        const sessionReportCache = new Map();
+
         // --- 認証（パスワード）システム ---
         let apiKey = localStorage.getItem('autopilot_api_key') || "";
 
@@ -568,6 +641,8 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             checkAuth();
+            renderSavedScan();
+            renderSavedReports();
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             } else {
@@ -607,59 +682,77 @@
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
             document.getElementById(tabId).classList.add('active');
-            if (tabId === 'tab-myportfolio') renderMyPortfolio();
+            if (tabId === 'tab-myportfolio') {
+                renderMyPortfolio();
+                renderSavedReports();
+            } else if (tabId === 'tab-discover') {
+                renderSavedScan();
+            }
         }
 
         document.getElementById('close-modal-btn').addEventListener('click', () => { stopSpeaking(); modal.classList.remove('opacity-100'); setTimeout(() => modal.classList.add('hidden'), 300); });
         
-        // 【自動修復通信システム】
-        async function getAvailableModel() {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-            const response = await fetch(url);
-            if (!response.ok) {
-                if (response.status === 401) throw new Error("APIキーが無効です");
-                throw new Error(`モデル一覧の取得に失敗しました (${response.status})`);
-            }
-            const data = await response.json();
-            
-            const validModels = data.models.filter(m => 
-                m.name.includes('gemini') && 
-                m.supportedGenerationMethods && 
-                m.supportedGenerationMethods.includes('generateContent')
-            ).map(m => m.name.replace('models/', ''));
+        // 利用可能なモデルの中から最適なものを自動選択する関数
+        let currentBestModel = null;
 
-            if (validModels.length === 0) throw new Error("利用可能なGeminiモデルが見つかりません。");
+        async function getBestModel() {
+            // すでに取得済みの場合はキャッシュを返す（無駄なAPI通信を省く）
+            if (currentBestModel) return currentBestModel;
 
-            const preferred = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-            for (const p of preferred) {
-                const found = validModels.find(m => m.includes(p) && !m.includes('vision') && !m.includes('8b'));
-                if (found) return found;
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                if (!response.ok) throw new Error("モデルの取得に失敗しました");
+                
+                const data = await response.json();
+                const availableModels = data.models.map(m => m.name.replace('models/', ''));
+
+                // 優先的に使用したいモデルのリスト（上から順に試行）
+                // ※ご自身の環境でProモデルを優先したい場合は、この順番を入れ替えてください。
+                const preferredModels = [
+                    'gemini-2.5-flash-preview-09-2025', // 現在のプレビュー環境用（最優先）
+                    'gemini-2.5-pro',
+                    'gemini-1.5-pro-latest',
+                    'gemini-1.5-pro',
+                    'gemini-2.5-flash',
+                    'gemini-1.5-flash-latest',
+                    'gemini-1.5-flash'
+                ];
+
+                for (const preferred of preferredModels) {
+                    if (availableModels.includes(preferred)) {
+                        currentBestModel = preferred;
+                        console.log(`[Model Auto-Select] 選択されたモデル: ${currentBestModel}`);
+                        return currentBestModel;
+                    }
+                }
+
+                // リストに見つからなければ利用可能なflashモデルにフォールバック
+                currentBestModel = availableModels.find(m => m.includes('flash')) || 'gemini-1.5-flash';
+                console.log(`[Model Auto-Select] フォールバックモデル: ${currentBestModel}`);
+                return currentBestModel;
+
+            } catch (e) {
+                console.warn("[Model Auto-Select Error] モデル一覧の取得に失敗しました。デフォルトを使用します。", e);
+                // 取得失敗時の安全なフォールバック
+                currentBestModel = 'gemini-2.5-flash-preview-09-2025';
+                return currentBestModel;
             }
-            return validModels[0];
         }
 
-        async function callGeminiAPI(payload, retries = 3) {
-            let model = localStorage.getItem('autopilot_model');
-            if (!model) {
-                model = await getAvailableModel();
-                localStorage.setItem('autopilot_model', model);
-            }
+        // 指数関数的バックオフ機能を追加した通信関数
+        async function callGeminiAPI(payload, maxRetries = 4) {
+            const model = await getBestModel();
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-            const delays = [3000, 6000, 10000];
-            let lastError = null;
+            let delay = 3000; 
 
-            for (let i = 0; i < retries; i++) {
+            for (let i = 0; i < maxRetries; i++) {
                 try {
-                    let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-                    let response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-
-                    if (response.status === 404) {
-                        console.log(`モデル ${model} が見つかりません。最新のモデルを再取得します...`);
-                        model = await getAvailableModel();
-                        localStorage.setItem('autopilot_model', model);
-                        url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-                        response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    }
+                    const response = await fetch(url, { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(payload) 
+                    });
 
                     if (response.ok) {
                         const data = await response.json();
@@ -670,10 +763,16 @@
                     if (response.status === 401) throw new Error("APIキーが無効です");
 
                     const errText = await response.text();
-                    console.warn(`[${model}] 通信エラー (試行 ${i+1}/${retries}):`, errText);
+                    
+                    if (response.status === 429) {
+                        console.warn(`[429 制限] ${delay/1000}秒待機して再試行します... (${i+1}/${maxRetries})`);
+                        await new Promise(r => setTimeout(r, delay));
+                        delay *= 2; 
+                        continue;
+                    }
 
-                    if ((response.status === 400 || response.status === 403) && payload.tools) {
-                        console.log(`[${model}] 検索ツールを無効化して自己修復実行...`);
+                    if (response.status === 400 && payload.tools) {
+                        console.warn(`[400 エラー] 検索ツールを無効化して修復実行...`);
                         const fallbackPayload = { ...payload };
                         delete fallbackPayload.tools;
                         const fbResponse = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fallbackPayload) });
@@ -686,16 +785,18 @@
 
                     throw new Error(`APIエラー (${response.status})`);
                 } catch (e) {
-                    lastError = e;
                     if (e.message.includes("APIキーが無効")) throw e;
                     
-                    if (i < retries - 1) {
-                        console.log(`負荷回避のため ${delays[i]/1000}秒待機して再試行します...`);
-                        await new Promise(r => setTimeout(r, delays[i]));
+                    if (i < maxRetries - 1) {
+                        console.warn(`[通信エラー] ${delay/1000}秒待機して再試行します...`, e);
+                        await new Promise(r => setTimeout(r, delay));
+                        delay *= 2;
+                    } else {
+                        throw e; 
                     }
                 }
             }
-            throw lastError;
+            throw new Error("APIの呼び出しに複数回失敗しました。時間をおいてやり直してください。");
         }
 
         function extractNumber(str) {
@@ -707,18 +808,39 @@
 
         function safeSetText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text || "---"; }
 
-        async function startAutoPilotMultiStep() {
-            // UIからパーソナライズ設定を取得
+        function renderSavedScan() {
+            const saved = JSON.parse(localStorage.getItem('autopilot_saved_scan_v1'));
+            const area = document.getElementById('saved-scan-area');
+            if (saved && saved.data) {
+                area.classList.remove('hidden');
+                const date = new Date(saved.lastUpdated);
+                document.getElementById('saved-scan-date').textContent = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                document.getElementById('saved-scan-conditions').textContent = saved.conditionText.replace(/\n/g, ' / ');
+            } else {
+                area.classList.add('hidden');
+            }
+        }
+
+        function loadSavedScan() {
+            const saved = JSON.parse(localStorage.getItem('autopilot_saved_scan_v1'));
+            if (!saved || !saved.data) return;
+            
+            document.getElementById('intro-panel').style.display = 'none';
+            document.getElementById('discover-results').classList.add('hidden');
+            errorMsg.classList.add('hidden');
+            
+            renderDiscoverResults(saved.data);
+        }
+
+        async function startAutoPilotMultiStep(isUpdate = false) {
             const segment = document.getElementById('setting-segment').value;
             const timeframe = document.getElementById('setting-timeframe').value;
             const priceMin = document.getElementById('setting-price-min').value;
             const priceMax = document.getElementById('setting-price-max').value;
             const yieldRaw = document.getElementById('setting-yield').value;
             
-            // グローバルに保存（Deep Scanでも使用）
             window.appSettings = { segment, timeframe, priceMin, priceMax, yieldRaw };
 
-            // プロンプト用の条件テキスト作成
             let conditionText = `検索対象市場: ${segment}\n情報の対象期間: ${timeframe}\n`;
             if (priceMin || priceMax) {
                 conditionText += `1株あたりの株価: `;
@@ -730,19 +852,32 @@
                 conditionText += `条件: 優待利回りまたは配当利回りが ${yieldRaw}% 以上の銘柄を優先\n`;
             }
 
+            let diffInstruction = '';
+            if (isUpdate) {
+                const saved = JSON.parse(localStorage.getItem('autopilot_saved_scan_v1'));
+                if (saved && saved.data && saved.data.ranking20) {
+                    const lastDate = new Date(saved.lastUpdated).toLocaleDateString('ja-JP');
+                    const prevTickers = saved.data.ranking20.map(r => r.ticker).join(', ');
+                    diffInstruction = `\n\n【重要: 差分アップデート指示】\n前回のスキャン日（${lastDate}）からの差分データを調査し、ランキングを最新状態に更新してください。\n前回のTOP20銘柄（${prevTickers}）を中心に、それ以降の最新ニュースや地合いの変化を反映させ、評価が落ちた銘柄は外し、新しく浮上した有望銘柄があれば入れ替えてください。`;
+                }
+            }
+
             document.getElementById('intro-panel').style.display = 'none';
             document.getElementById('discover-results').classList.add('hidden');
             errorMsg.classList.add('hidden');
 
             loadingTitle.textContent = "AIスキャンを実行中...";
-            loadingText.innerHTML = `市場のトレンドと条件に合う【おすすめ日本株20選】を抽出しています...<br><span class='text-xs text-slate-500'>市場全体を俯瞰し、一括でランキング化します（約15〜30秒）</span>`;
+            if (isUpdate) {
+                loadingText.innerHTML = `過去のデータからの【差分】を分析・更新しています...<br><span class='text-xs text-slate-500'>前回のスキャン結果をベースに最新情報を反映します（約15〜30秒）</span>`;
+            } else {
+                loadingText.innerHTML = `市場のトレンドと条件に合う【おすすめ日本株20選】を抽出しています...<br><span class='text-xs text-slate-500'>市場全体を俯瞰し、一括でランキング化します（約15〜30秒）</span>`;
+            }
             loadingPanel.classList.remove('hidden');
             loadingPanel.classList.add('flex');
 
             try {
-                // ループ検索を廃止し、1回のAPIコールで20件のランキングを一括取得する
                 const step1Payload = {
-                    contents: [{ parts: [{ text: `以下の検索条件とユーザーの要望に従って、最新の経済ニュースを分析してください。\n\n【検索条件】\n${conditionText}\n\n【指示】\n1. 指定された市場における資金流入(HOT)と流出(COLD)のヒートマップを作成してください。\n2. 条件を満たす、今初心者が買うべき有望な【日本株おすすめランキングTOP20銘柄】を作成してください。\n※ティッカーシンボルは日本の証券コード（例: 7203）のみを出力してください。米国株や他国の銘柄は絶対に含めないでください。` }] }],
+                    contents: [{ parts: [{ text: `以下の検索条件とユーザーの要望に従って、最新の経済ニュースを分析してください。\n\n【検索条件】\n${conditionText}${diffInstruction}\n\n【指示】\n1. 指定された市場における資金流入(HOT)と流出(COLD)のヒートマップを作成してください。\n2. 条件を満たす、今初心者が買うべき有望な【日本株おすすめランキングTOP20銘柄】を作成してください。\n※ティッカーシンボルは日本の証券コード（例: 7203）のみを出力してください。米国株や他国の銘柄は絶対に含めないでください。` }] }],
                     systemInstruction: { parts: [{ text: "あなたは日本株に特化したプロの証券アナリストです。必ずJSONで出力してください。" }] },
                     tools: [{ google_search: {} }],
                     generationConfig: {
@@ -774,12 +909,19 @@
                     }
                 };
 
-                const step1Result = await callGeminiAPI(step1Payload, 3);
+                const step1Result = await callGeminiAPI(step1Payload);
                 const finalData = JSON.parse(step1Result.candidates[0].content.parts[0].text);
 
                 if (!finalData.ranking20 || finalData.ranking20.length === 0) {
                     throw new Error("条件に合致する銘柄が見つかりませんでした。条件（株価や利回りなど）を緩めて再度お試しください。");
                 }
+
+                localStorage.setItem('autopilot_saved_scan_v1', JSON.stringify({
+                    lastUpdated: Date.now(),
+                    conditionText: conditionText,
+                    data: finalData
+                }));
+                renderSavedScan();
 
                 renderDiscoverResults(finalData);
 
@@ -787,10 +929,10 @@
                 console.error("スキャンエラー:", error);
                 if (error.message.includes("APIキーが無効") || error.message.includes("401")) {
                     errorMsg.innerHTML = `APIキー（パスワード）が間違っています。<br><button onclick="resetApiKey()" class="mt-4 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white font-bold text-sm hover:bg-slate-700 transition-colors inline-flex items-center"><i data-lucide="key" class="w-4 h-4 mr-2"></i> キーを再入力する</button>`;
-                } else if (error.message.includes("429")) {
-                    errorMsg.innerHTML = `AIの処理制限（429エラー）に達しました。1〜2分待ってから再度お試しください。`;
+                } else if (error.message.includes("複数回失敗")) {
+                    errorMsg.innerHTML = `AIの処理制限（混雑）によりスキャンを完了できませんでした。<br>数分待ってから再度お試しください。`;
                 } else {
-                    errorMsg.innerHTML = `AIの処理中にエラーが発生しました:<br><span class="text-xs break-all text-red-400 font-mono">${error.message}</span><br><br>条件を少し変えるか、時間をおいて再度お試しください。`;
+                    errorMsg.innerHTML = `AIの処理中にエラーが発生しました:<br><span class="text-xs break-all text-red-400 font-mono">${error.message}</span>`;
                 }
                 errorMsg.classList.remove('hidden');
                 document.getElementById('intro-panel').style.display = 'block';
@@ -848,7 +990,6 @@
                     const rankEl = clone.querySelector('.rank-text');
                     if (rankEl) {
                         rankEl.textContent = item.rank;
-                        // TOP3の装飾
                         if (item.rank === 1) { rankEl.classList.add('text-yellow-400', 'rank-badge-1'); rankEl.classList.remove('text-slate-600'); }
                         else if (item.rank === 2) { rankEl.classList.add('text-slate-300', 'rank-badge-2'); rankEl.classList.remove('text-slate-600'); }
                         else if (item.rank === 3) { rankEl.classList.add('text-amber-500', 'rank-badge-3'); rankEl.classList.remove('text-slate-600'); }
@@ -865,7 +1006,11 @@
                     safeSetClone('.reason-text', item.reason);
 
                     const deepBtn = clone.querySelector('.deep-scan-btn');
-                    if(deepBtn) deepBtn.addEventListener('click', () => openDeepScanModal(item.ticker, item.companyName));
+                    if(deepBtn) deepBtn.addEventListener('click', () => openDeepScanModal(item.ticker, item.companyName, false));
+                    
+                    // --- 追加: 優待・詳細へのリンク (Yahoo!ファイナンス) ---
+                    const benefitLink = clone.querySelector('.benefit-link-btn');
+                    if(benefitLink) benefitLink.href = `https://finance.yahoo.co.jp/quote/${item.ticker}.T`;
                     
                     listContainer.appendChild(clone);
                 });
@@ -938,10 +1083,14 @@
                 const delBtn = clone.querySelector('.delete-btn');
                 if(delBtn) delBtn.addEventListener('click', () => removeMyAsset(asset.id));
                 const deepBtn = clone.querySelector('.deep-scan-btn');
-                if(deepBtn) deepBtn.addEventListener('click', () => openDeepScanModal(asset.ticker, '保有銘柄'));
+                if(deepBtn) deepBtn.addEventListener('click', () => openDeepScanModal(asset.ticker, '保有銘柄', false));
                 const whyMovedBtn = clone.querySelector('.why-moved-btn');
                 const whyMovedResult = clone.querySelector('.why-moved-result');
                 if(whyMovedBtn && whyMovedResult) whyMovedBtn.addEventListener('click', () => explainPriceMovement(asset.ticker, whyMovedBtn, whyMovedResult));
+
+                // --- 追加: 優待・詳細へのリンク (Yahoo!ファイナンス) ---
+                const benefitLink = clone.querySelector('.benefit-link-btn');
+                if(benefitLink) benefitLink.href = `https://finance.yahoo.co.jp/quote/${asset.ticker}.T`;
 
                 list.appendChild(clone);
             });
@@ -968,12 +1117,11 @@
                     tools: [{ google_search: {} }],
                     generationConfig: {
                         responseMimeType: "application/json",
-                        responseSchema: { type: "OBJECT", properties: { correlationRisk: { type: "STRING" }, results: { type: "ARRAY", items: { type: "OBJECT", properties: { ticker: { type: "STRING" }, verdict: { type: "STRING" }, advice: { type: "STRING" } }, required: ["ticker", "verdict", "advice"] } } }, required: ["correlationRisk", "results"] }
+                        responseSchema: { type: "OBJECT", properties: { correlationRisk: { type: "STRING" }, results: { type: "ARRAY", items: { type: "OBJECT", properties: { ticker: { type: "STRING" }, verdict: { type: "STRING" }, advice: { type: "STRING" }, expectedYield: {type: "NUMBER", description: "予想配当利回り"} }, required: ["ticker", "verdict", "advice"] } } }, required: ["correlationRisk", "results"] }
                     }
                 };
 
-                const result = await callGeminiAPI(payload, 2);
-                if(!result || !result.candidates) throw new Error("無効なAPIレスポンス");
+                const result = await callGeminiAPI(payload);
                 const aiData = JSON.parse(result.candidates[0].content.parts[0].text);
                 
                 const commentEl = document.getElementById('my-market-commentary');
@@ -1019,7 +1167,7 @@
                     tools: [{ google_search: {} }]
                 };
 
-                const result = await callGeminiAPI(payload, 2);
+                const result = await callGeminiAPI(payload);
                 const answer = result.candidates[0].content.parts[0].text;
                 
                 resultElement.innerHTML = `<strong>💡 AIの解説:</strong><br>${answer}`;
@@ -1035,9 +1183,64 @@
         }
 
         /* =========================================================
+           機能4: 保存済み企業カルテ管理
+        ========================================================= */
+        function getSavedReports() {
+            return JSON.parse(localStorage.getItem('autopilot_saved_reports_v1') || '{}');
+        }
+
+        function saveSavedReports(reports) {
+            localStorage.setItem('autopilot_saved_reports_v1', JSON.stringify(reports));
+        }
+
+        function deleteSavedReport(ticker) {
+            const reports = getSavedReports();
+            delete reports[ticker];
+            saveSavedReports(reports);
+            renderSavedReports();
+        }
+
+        function renderSavedReports() {
+            const reports = getSavedReports();
+            const list = document.getElementById('saved-reports-list');
+            const emptyMsg = document.getElementById('saved-reports-empty');
+            if (!list || !emptyMsg) return;
+
+            const tickers = Object.keys(reports);
+            list.innerHTML = '';
+            
+            if (tickers.length === 0) {
+                emptyMsg.classList.remove('hidden');
+                return;
+            }
+            emptyMsg.classList.add('hidden');
+
+            tickers.sort((a, b) => reports[b].lastUpdated - reports[a].lastUpdated).forEach(ticker => {
+                const item = reports[ticker];
+                const template = document.getElementById('saved-report-card-template');
+                if (!template) return;
+                const clone = template.content.cloneNode(true);
+                
+                clone.querySelector('.ticker-text').textContent = ticker;
+                clone.querySelector('.company-text').textContent = item.companyName || '企業名不明';
+                
+                const date = new Date(item.lastUpdated);
+                const dateStr = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                clone.querySelector('.last-update-text').textContent = dateStr;
+
+                clone.querySelector('.open-report-btn').addEventListener('click', () => openDeepScanModal(ticker, item.companyName, false));
+                clone.querySelector('.update-report-btn').addEventListener('click', () => openDeepScanModal(ticker, item.companyName, true));
+                clone.querySelector('.delete-report-btn').addEventListener('click', () => deleteSavedReport(ticker));
+
+                list.appendChild(clone);
+            });
+            lucide.createIcons();
+        }
+
+        /* =========================================================
            機能3: 企業カルテ (Deep Scan)
         ========================================================= */
-        async function openDeepScanModal(ticker, companyName) {
+        async function openDeepScanModal(ticker, companyName, forceUpdate = false) {
             safeSetText('modal-title', ticker);
             safeSetText('modal-subtitle', companyName);
             document.getElementById('modal-loading').classList.remove('hidden');
@@ -1060,17 +1263,37 @@
                 tvContainer.innerHTML = `<iframe src="https://s.tradingview.com/widgetembed/?symbol=${tvTicker}&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=131722&theme=dark&style=3&timezone=Asia%2FTokyo&locale=ja" width="100%" height="100%" frameborder="0" allowtransparency="true" scrolling="no" allowfullscreen=""></iframe>`;
             }
 
+            if (!forceUpdate && sessionReportCache.has(ticker)) {
+                document.getElementById('modal-loading').classList.add('hidden');
+                renderDeepScanData(sessionReportCache.get(ticker));
+                return;
+            }
+
+            const savedReports = getSavedReports();
+            
+            if (!forceUpdate && savedReports[ticker]) {
+                sessionReportCache.set(ticker, savedReports[ticker].data);
+                document.getElementById('modal-loading').classList.add('hidden');
+                renderDeepScanData(savedReports[ticker].data);
+                return;
+            }
+
             const loadingTexts = ["SNS感情を解析中...", "機関投資家の動向を照会中...", "テクニカル指標を分析中...", "未来のシナリオと注目イベントを生成中...", "AI総合評価チャートを算出中..."];
             let ltIdx = 0;
             if(loadingInterval) clearInterval(loadingInterval);
             loadingInterval = setInterval(() => { safeSetText('modal-loading-text', loadingTexts[ltIdx % loadingTexts.length]); ltIdx++; }, 1500);
 
             try {
-                // スキャン時に設定された期間があれば引き継ぐ（なければ直近1ヶ月）
                 const timeframe = window.appSettings ? window.appSettings.timeframe : '直近1ヶ月';
+                let diffInstruction = '';
+                
+                if (forceUpdate && savedReports[ticker]) {
+                    const lastDate = new Date(savedReports[ticker].lastUpdated).toLocaleDateString('ja-JP');
+                    diffInstruction = `\n\n【重要: 差分アップデート指示】\n前回の調査日は「${lastDate}」です。この日付以降に発生した最新ニュースや決算発表、マクロ変化を重点的に検索し、既存のデータ・評価を最新状態にアップデートしてください。`;
+                }
 
                 const payload = {
-                    contents: [{ parts: [{ text: `日本の証券コード「${ticker}」の企業（日本国内市場）について、${timeframe}の情報を中心に深くGoogle検索し、以下の情報を完全な日本語でJSON出力してください。国内のニュースや日本語ソース、日本経済の動向を最優先して分析してください。
+                    contents: [{ parts: [{ text: `日本の証券コード「${ticker}」の企業（日本国内市場）について、${timeframe}の情報を中心に深くGoogle検索し、以下の情報を完全な日本語でJSON出力してください。国内のニュースや日本語ソース、日本経済の動向を最優先して分析してください。${diffInstruction}
 1. 専門家AIチームの議論と最終判断
 2. 3つの未来シナリオ(Bull/Base/Bear)とその発生確率・ターゲット価格（日本円）
 3. 今後数ヶ月の国内の注目イベント(決算、日銀会合、国内規制など)のタイムライン
@@ -1106,66 +1329,21 @@
                     }
                 };
                 
-                const result = await callGeminiAPI(payload, 3);
+                const result = await callGeminiAPI(payload);
                 clearInterval(loadingInterval);
-                if(!result || !result.candidates) throw new Error("無効なAPIレスポンス");
                 const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 
-                safeSetText('modal-genius-view', data.geniusView); safeSetText('modal-veteran-view', data.veteranView);
-                safeSetText('modal-macro-view', data.macroView); safeSetText('modal-quant-view', data.quantView);
+                savedReports[ticker] = { lastUpdated: Date.now(), companyName, data };
+                saveSavedReports(savedReports);
+                sessionReportCache.set(ticker, data);
                 
-                const badge = document.getElementById('modal-decision-badge');
-                if(badge && data.finalVerdict) {
-                    const decision = data.finalVerdict.decision || "不明";
-                    badge.textContent = decision;
-                    badge.className = 'px-5 py-2 rounded font-black text-sm border tracking-widest'; 
-                    if (decision.includes('BUY') || decision.includes('買')) badge.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/50');
-                    else if (decision.includes('HOLD') || decision.includes('待')) badge.classList.add('bg-slate-500/20', 'text-slate-300', 'border-slate-500/50');
-                    else badge.classList.add('bg-red-500/20', 'text-red-400', 'border-red-500/50');
+                if (document.getElementById('tab-myportfolio').classList.contains('active')) {
+                    renderSavedReports();
                 }
-                
-                if(data.finalVerdict) safeSetText('modal-final-conclusion', data.finalVerdict.conclusion);
-
-                const modalSpeakBtn = document.getElementById('modal-speak-btn');
-                if(modalSpeakBtn && data.finalVerdict) {
-                    modalSpeakBtn.classList.remove('hidden');
-                    modalSpeakBtn.onclick = () => speakText(`専門家AIチームによる最終決断は、${data.finalVerdict.decision}です。${data.finalVerdict.conclusion}`, modalSpeakBtn);
-                }
-
-                if(data.scenarios) {
-                    if(data.scenarios.bull) { safeSetText('modal-bull-target', data.scenarios.bull.targetPrice); safeSetText('modal-bull-prob-txt', `${data.scenarios.bull.probability}%`); safeSetText('modal-bull-cond', data.scenarios.bull.condition); }
-                    if(data.scenarios.base) { safeSetText('modal-base-target', data.scenarios.base.targetPrice); safeSetText('modal-base-prob-txt', `${data.scenarios.base.probability}%`); safeSetText('modal-base-cond', data.scenarios.base.condition); }
-                    if(data.scenarios.bear) { safeSetText('modal-bear-target', data.scenarios.bear.targetPrice); safeSetText('modal-bear-prob-txt', `${data.scenarios.bear.probability}%`); safeSetText('modal-bear-cond', data.scenarios.bear.condition); }
-                    
-                    setTimeout(() => {
-                        const bullBar = document.getElementById('modal-bull-bar'); const baseBar = document.getElementById('modal-base-bar'); const bearBar = document.getElementById('modal-bear-bar');
-                        if (bullBar && data.scenarios.bull) bullBar.style.width = `${data.scenarios.bull.probability}%`;
-                        if (baseBar && data.scenarios.base) baseBar.style.width = `${data.scenarios.base.probability}%`;
-                        if (bearBar && data.scenarios.bear) bearBar.style.width = `${data.scenarios.bear.probability}%`;
-                    }, 300);
-                }
-
-                const tlContainer = document.getElementById('modal-timeline');
-                if(tlContainer) {
-                    tlContainer.innerHTML = '';
-                    if(data.catalystTimeline) {
-                        data.catalystTimeline.forEach(item => {
-                            const div = document.createElement('div'); div.className = 'timeline-item';
-                            div.innerHTML = `<div class="flex items-center gap-2 mb-1"><span class="text-xs font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded">${item.date}</span><span class="text-[10px] impact-${item.impact} border border-current px-1.5 rounded">重要度: ${item.impact}</span></div><div class="text-sm text-slate-200">${item.event}</div>`;
-                            tlContainer.appendChild(div);
-                        });
-                    }
-                }
-
-                if(data.alternativeData) { safeSetText('alt-sentiment', data.alternativeData.sentiment); safeSetText('alt-insider', data.alternativeData.insider); safeSetText('alt-technical', data.alternativeData.technical); safeSetText('alt-supply', data.alternativeData.supplyChain); }
-                if(data.radarScores) drawRadarChart(data.radarScores);
-
-                safeSetText('modal-business', data.businessModel); safeSetText('modal-performance', data.performance); safeSetText('modal-strength', data.strengthHighlight);
-                safeSetText('modal-financial', data.financialHealth); safeSetText('modal-investment', data.investmentActivities); safeSetText('modal-shareholder', data.shareholderReturn); 
 
                 document.getElementById('modal-loading').classList.add('hidden');
-                document.getElementById('modal-content-data').classList.remove('hidden');
-                document.getElementById('modal-content-data').classList.add('flex');
+                renderDeepScanData(data); 
+
             } catch (error) {
                 console.error("企業カルテ生成エラー:", error);
                 if(loadingInterval) clearInterval(loadingInterval);
@@ -1175,12 +1353,73 @@
                     if (error.message.includes("APIキーが無効")) {
                         modalErrMsg.innerHTML = `APIキー（パスワード）が間違っています。<br><button onclick="resetApiKey()" class="mt-3 px-3 py-1.5 bg-red-900/50 border border-red-500/50 rounded-lg text-white font-bold text-xs hover:bg-red-800 transition-colors inline-flex items-center"><i data-lucide="key" class="w-3 h-3 mr-1"></i> キーを再入力</button>`; 
                         lucide.createIcons();
+                    } else if (error.message.includes("複数回失敗")) {
+                        modalErrMsg.innerHTML = `AIの処理制限（混雑）によりカルテを生成できませんでした。<br>数分待ってから再度お試しください。`;
                     } else {
                         modalErrMsg.innerHTML = `企業カルテの生成に失敗しました:<br><span class="text-xs break-all text-red-400 font-mono">${error.message}</span>`; 
                     }
                     modalErrMsg.classList.remove('hidden'); 
                 }
             }
+        }
+
+        function renderDeepScanData(data) {
+            safeSetText('modal-genius-view', data.geniusView); 
+            safeSetText('modal-veteran-view', data.veteranView);
+            safeSetText('modal-macro-view', data.macroView); 
+            safeSetText('modal-quant-view', data.quantView);
+            
+            const badge = document.getElementById('modal-decision-badge');
+            if(badge && data.finalVerdict) {
+                const decision = data.finalVerdict.decision || "不明";
+                badge.textContent = decision;
+                badge.className = 'px-5 py-2 rounded font-black text-sm border tracking-widest'; 
+                if (decision.includes('BUY') || decision.includes('買')) badge.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/50');
+                else if (decision.includes('HOLD') || decision.includes('待')) badge.classList.add('bg-slate-500/20', 'text-slate-300', 'border-slate-500/50');
+                else badge.classList.add('bg-red-500/20', 'text-red-400', 'border-red-500/50');
+            }
+            
+            if(data.finalVerdict) safeSetText('modal-final-conclusion', data.finalVerdict.conclusion);
+
+            const modalSpeakBtn = document.getElementById('modal-speak-btn');
+            if(modalSpeakBtn && data.finalVerdict) {
+                modalSpeakBtn.classList.remove('hidden');
+                modalSpeakBtn.onclick = () => speakText(`専門家AIチームによる最終決断は、${data.finalVerdict.decision}です。${data.finalVerdict.conclusion}`, modalSpeakBtn);
+            }
+
+            if(data.scenarios) {
+                if(data.scenarios.bull) { safeSetText('modal-bull-target', data.scenarios.bull.targetPrice); safeSetText('modal-bull-prob-txt', `${data.scenarios.bull.probability}%`); safeSetText('modal-bull-cond', data.scenarios.bull.condition); }
+                if(data.scenarios.base) { safeSetText('modal-base-target', data.scenarios.base.targetPrice); safeSetText('modal-base-prob-txt', `${data.scenarios.base.probability}%`); safeSetText('modal-base-cond', data.scenarios.base.condition); }
+                if(data.scenarios.bear) { safeSetText('modal-bear-target', data.scenarios.bear.targetPrice); safeSetText('modal-bear-prob-txt', `${data.scenarios.bear.probability}%`); safeSetText('modal-bear-cond', data.scenarios.bear.condition); }
+                
+                setTimeout(() => {
+                    const bullBar = document.getElementById('modal-bull-bar'); const baseBar = document.getElementById('modal-base-bar'); const bearBar = document.getElementById('modal-bear-bar');
+                    if (bullBar && data.scenarios.bull) bullBar.style.width = `${data.scenarios.bull.probability}%`;
+                    if (baseBar && data.scenarios.base) baseBar.style.width = `${data.scenarios.base.probability}%`;
+                    if (bearBar && data.scenarios.bear) bearBar.style.width = `${data.scenarios.bear.probability}%`;
+                }, 300);
+            }
+
+            const tlContainer = document.getElementById('modal-timeline');
+            if(tlContainer) {
+                tlContainer.innerHTML = '';
+                if(data.catalystTimeline) {
+                    data.catalystTimeline.forEach(item => {
+                        const div = document.createElement('div'); div.className = 'timeline-item';
+                        div.innerHTML = `<div class="flex items-center gap-2 mb-1"><span class="text-xs font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded">${item.date}</span><span class="text-[10px] impact-${item.impact} border border-current px-1.5 rounded">重要度: ${item.impact}</span></div><div class="text-sm text-slate-200">${item.event}</div>`;
+                        tlContainer.appendChild(div);
+                    });
+                }
+            }
+
+            if(data.alternativeData) { safeSetText('alt-sentiment', data.alternativeData.sentiment); safeSetText('alt-insider', data.alternativeData.insider); safeSetText('alt-technical', data.alternativeData.technical); safeSetText('alt-supply', data.alternativeData.supplyChain); }
+            if(data.radarScores) drawRadarChart(data.radarScores);
+
+            safeSetText('modal-business', data.businessModel); safeSetText('modal-performance', data.performance); safeSetText('modal-strength', data.strengthHighlight);
+            safeSetText('modal-financial', data.financialHealth); safeSetText('modal-investment', data.investmentActivities); safeSetText('modal-shareholder', data.shareholderReturn); 
+
+            document.getElementById('modal-content-data').classList.remove('hidden');
+            document.getElementById('modal-content-data').classList.add('flex');
         }
 
         function drawRadarChart(scores) {
