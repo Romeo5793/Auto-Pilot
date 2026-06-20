@@ -336,6 +336,14 @@
 
         <!-- Tab: My Portfolio -->
         <div id="tab-myportfolio" class="tab-content gap-6">
+            
+            <!-- お気に入り（ウォッチリスト）セクション -->
+            <div class="glass-panel p-6 border border-yellow-500/20">
+                <h3 class="text-sm font-bold text-yellow-400 mb-4 flex items-center tracking-wide"><i data-lucide="star" class="w-5 h-5 mr-2"></i> お気に入り (ウォッチリスト)</h3>
+                <div id="watchlist-container" class="flex flex-wrap gap-3"></div>
+                <div id="watchlist-empty" class="text-xs text-slate-500">★マークを押して追加した銘柄がここに表示されます。</div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="glass-panel p-6 md:col-span-2 relative overflow-hidden">
                     <div class="absolute -right-10 -bottom-10 opacity-5"><i data-lucide="pie-chart" class="w-64 h-64"></i></div>
@@ -430,6 +438,7 @@
                     <div class="flex items-end gap-3 mb-1">
                         <h4 class="text-2xl font-black text-white ticker-text en-font leading-none tracking-tight">TICKER</h4>
                         <p class="text-sm text-slate-300 company-text mb-0.5 font-bold">企業名</p>
+                        <button class="fav-toggle-btn text-slate-500 hover:text-yellow-400 transition-colors ml-2 mb-0.5" title="お気に入りに追加/解除"><i data-lucide="star" class="w-5 h-5"></i></button>
                     </div>
                     
                     <!-- 優待情報エリア -->
@@ -539,6 +548,7 @@
                     <div>
                         <h3 class="text-xl md:text-2xl font-black text-white tracking-tight flex items-center">
                             企業カルテ <span class="mx-2 text-slate-600">/</span> <span id="modal-title" class="text-purple-400 en-font">TICKER</span>
+                            <button id="modal-fav-btn" class="ml-4 text-slate-500 hover:text-yellow-400 transition-colors" title="お気に入りに追加/解除"><i data-lucide="star" class="w-6 h-6"></i></button>
                         </h3>
                         <p class="text-[11px] text-slate-400 font-bold tracking-widest" id="modal-subtitle">企業名</p>
                     </div>
@@ -730,7 +740,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            addLog("INFO", "アプリケーション起動"); checkAuth(); renderSavedScan(); renderSavedReports();
+            addLog("INFO", "アプリケーション起動"); checkAuth(); renderSavedScan(); renderSavedReports(); renderWatchlist();
             if (typeof lucide !== 'undefined') lucide.createIcons();
             else setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 500);
         });
@@ -765,7 +775,7 @@
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
             document.getElementById(tabId).classList.add('active');
-            if (tabId === 'tab-myportfolio') { renderMyPortfolio(); renderSavedReports(); } 
+            if (tabId === 'tab-myportfolio') { renderMyPortfolio(); renderSavedReports(); renderWatchlist(); } 
             else if (tabId === 'tab-discover') { renderSavedScan(); }
         }
 
@@ -1088,6 +1098,16 @@
                         yutaiEl.querySelector('.yutai-content').textContent = item.yutaiDetail;
                     }
 
+                    // お気に入りボタンの制御
+                    const favBtn = clone.querySelector('.fav-toggle-btn');
+                    if(favBtn) {
+                        if (isWatchlisted(item.ticker)) favBtn.innerHTML = `<i data-lucide="star" class="w-5 h-5 fill-yellow-400 text-yellow-400"></i>`;
+                        favBtn.addEventListener('click', (e) => {
+                            e.stopPropagation(); // 詳細画面などが開くのを防ぐ
+                            toggleWatchlist(item.ticker, item.companyName, favBtn, 'w-5 h-5');
+                        });
+                    }
+
                     const deepBtn = clone.querySelector('.deep-scan-btn');
                     if(deepBtn) deepBtn.addEventListener('click', () => openDeepScanModal(item.ticker, item.companyName, false));
                     
@@ -1101,6 +1121,62 @@
             const resContainer = document.getElementById('discover-results');
             resContainer.classList.remove('hidden'); resContainer.classList.add('flex');
             setTimeout(() => { resContainer.style.opacity = '1'; lucide.createIcons(); }, 100);
+        }
+
+        /* =========================================================
+           お気に入り (ウォッチリスト) 機能
+        ========================================================= */
+        function getWatchlist() { return JSON.parse(localStorage.getItem('autopilot_watchlist_v1') || '[]'); }
+        function saveWatchlist(list) { localStorage.setItem('autopilot_watchlist_v1', JSON.stringify(list)); }
+        function isWatchlisted(ticker) { return getWatchlist().some(item => item.ticker === ticker); }
+        
+        function toggleWatchlist(ticker, companyName, btnElement, iconSizeClass = "w-5 h-5") {
+            let list = getWatchlist();
+            const exists = list.some(item => item.ticker === ticker);
+            if (exists) {
+                list = list.filter(item => item.ticker !== ticker);
+                if (btnElement) btnElement.innerHTML = `<i data-lucide="star" class="${iconSizeClass}"></i>`;
+            } else {
+                list.push({ ticker, companyName, addedAt: Date.now() });
+                if (btnElement) btnElement.innerHTML = `<i data-lucide="star" class="${iconSizeClass} fill-yellow-400 text-yellow-400"></i>`;
+            }
+            saveWatchlist(list);
+            lucide.createIcons();
+            
+            // ポートフォリオタブが開いていれば再描画
+            if (document.getElementById('tab-myportfolio').classList.contains('active')) {
+                renderWatchlist();
+            }
+        }
+
+        function renderWatchlist() {
+            const list = getWatchlist();
+            const container = document.getElementById('watchlist-container');
+            const emptyMsg = document.getElementById('watchlist-empty');
+            if (!container || !emptyMsg) return;
+
+            container.innerHTML = '';
+            if (list.length === 0) {
+                emptyMsg.classList.remove('hidden');
+                return;
+            }
+            emptyMsg.classList.add('hidden');
+
+            list.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'bg-slate-800/80 hover:bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 flex items-center gap-3 cursor-pointer transition-colors shadow-lg';
+                div.innerHTML = `
+                    <div class="flex flex-col" onclick="openDeepScanModal('${item.ticker}', '${item.companyName}', false)">
+                        <span class="text-white font-black en-font text-lg leading-none">${item.ticker}</span>
+                        <span class="text-[10px] text-slate-400 font-bold">${item.companyName}</span>
+                    </div>
+                    <button class="text-slate-500 hover:text-red-400 transition-colors ml-1 p-1" onclick="toggleWatchlist('${item.ticker}', '${item.companyName}')" title="削除">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+            lucide.createIcons();
         }
 
         /* =========================================================
@@ -1331,6 +1407,22 @@
         async function openDeepScanModal(ticker, companyName, forceUpdate = false) {
             addLog("INFO", `【企業カルテ表示】開始 (ticker: ${ticker}, forceUpdate: ${forceUpdate})`);
             safeSetText('modal-title', ticker); safeSetText('modal-subtitle', companyName);
+
+            // お気に入りボタンの同期
+            const modalFavBtn = document.getElementById('modal-fav-btn');
+            if (modalFavBtn) {
+                if (isWatchlisted(ticker)) {
+                    modalFavBtn.innerHTML = `<i data-lucide="star" class="w-6 h-6 fill-yellow-400 text-yellow-400"></i>`;
+                } else {
+                    modalFavBtn.innerHTML = `<i data-lucide="star" class="w-6 h-6"></i>`;
+                }
+                // イベントリスナーの重複を防ぐためにクローンして再生成
+                const newFavBtn = modalFavBtn.cloneNode(true);
+                modalFavBtn.parentNode.replaceChild(newFavBtn, modalFavBtn);
+                newFavBtn.addEventListener('click', () => toggleWatchlist(ticker, companyName, newFavBtn, 'w-6 h-6'));
+                setTimeout(() => lucide.createIcons(), 10);
+            }
+
             document.getElementById('modal-loading').classList.remove('hidden');
             document.getElementById('modal-content-data').classList.add('hidden');
             const errEl = document.getElementById('modal-error-message'); if(errEl) errEl.classList.add('hidden');
