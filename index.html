@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI AUTO-PILOT (Japan Edition v5)</title>
+    <title>AI AUTO-PILOT (Japan Edition v6)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -165,24 +165,57 @@
 
         <!-- Tab: Discover -->
         <div id="tab-discover" class="tab-content active gap-8">
-            <div id="intro-panel" class="glass-panel p-8 py-12 relative overflow-hidden text-center flex flex-col items-center justify-center min-h-[60vh]">
+            <div id="intro-panel" class="glass-panel p-6 md:p-10 relative overflow-hidden text-center flex flex-col items-center justify-center min-h-[60vh]">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
                 
-                <h2 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 tracking-tight text-white leading-tight mt-8">日本株AI予測エンジン</h2>
-                <p class="text-slate-400 mb-8 max-w-2xl mx-auto text-lg md:text-xl">
-                    指定された条件に合わせてAIが国内市場を瞬時に分析し、<br class="hidden sm:block">
+                <h2 class="text-3xl md:text-5xl lg:text-6xl font-black mb-6 tracking-tight text-white leading-tight mt-4">日本株AI予測エンジン</h2>
+                <p class="text-slate-400 mb-8 max-w-2xl mx-auto text-sm md:text-lg">
+                    指定された条件に合わせてAIが国内市場を瞬時に検索・分析し、<br class="hidden sm:block">
                     今最も安全で利益が狙える「買い銘柄」を発掘します。
                 </p>
 
-                <!-- パーソナライズ設定パネル -->
-                <div class="mb-8 w-full max-w-4xl mx-auto glass-panel p-6 border border-purple-500/30 text-left relative z-10">
-                    <h3 class="text-sm font-bold text-purple-400 mb-4 flex items-center tracking-wide">
-                        <i data-lucide="sliders-horizontal" class="w-4 h-4 mr-2"></i> スキャン条件・パーソナライズ設定
+                <!-- 差分更新（続きから始める）エリア：一番目立つ位置に移動 -->
+                <div id="saved-scan-area" class="w-full max-w-5xl mx-auto hidden relative z-10 text-left mb-10">
+                    <h3 class="text-lg font-black text-purple-400 mb-3 flex items-center tracking-wide">
+                        <i data-lucide="refresh-cw" class="w-5 h-5 mr-2"></i> 前回の続きから始める（差分更新）
                     </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/50 rounded-2xl p-5 md:p-6 shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(219,39,119,0.5)] transition-all relative overflow-hidden">
+                        <div class="absolute -right-10 -bottom-10 opacity-10"><i data-lucide="radar" class="w-64 h-64"></i></div>
+                        <div class="flex flex-col md:flex-row justify-between md:items-center gap-6 relative z-10">
+                            <div class="flex-grow">
+                                <div class="text-sm text-purple-300 mb-2 font-bold flex items-center">
+                                    <i data-lucide="history" class="w-4 h-4 mr-1"></i> 前回更新: <span id="saved-scan-date" class="text-white en-font ml-1"></span>
+                                </div>
+                                <div id="saved-scan-conditions" class="text-xs text-slate-300 line-clamp-2 leading-relaxed bg-slate-900/50 p-2 rounded-lg border border-slate-700/50"></div>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
+                                <button onclick="loadSavedScan()" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors border border-slate-600 flex justify-center items-center shadow-lg">
+                                    <i data-lucide="book-open" class="w-4 h-4 mr-2"></i> そのまま開く
+                                </button>
+                                <button onclick="startAutoPilotMultiStep(true)" class="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black rounded-xl transition-all shadow-lg flex justify-center items-center transform hover:scale-105">
+                                    <i data-lucide="sparkles" class="w-5 h-5 mr-2"></i> 最新情報で差分更新
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 区切り線 -->
+                <div id="intro-divider" class="w-full max-w-5xl mx-auto hidden mb-10 flex items-center">
+                    <div class="flex-grow h-px bg-slate-800"></div>
+                    <span class="px-4 text-xs font-bold text-slate-600 tracking-widest uppercase">Or start new scan</span>
+                    <div class="flex-grow h-px bg-slate-800"></div>
+                </div>
+
+                <!-- パーソナライズ設定パネル -->
+                <div class="mb-8 w-full max-w-5xl mx-auto glass-panel p-6 border border-blue-500/30 text-left relative z-10">
+                    <h3 class="text-sm font-bold text-blue-400 mb-4 flex items-center tracking-wide">
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4 mr-2"></i> 新規スキャン条件
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         
                         <!-- ① 市場セグメント -->
-                        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+                        <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
                             <label class="block text-[11px] text-slate-400 mb-1 font-bold">国内市場セグメント</label>
                             <select id="setting-segment" class="w-full bg-transparent text-white text-sm focus:outline-none en-font cursor-pointer">
                                 <option value="日本のすべての市場（プライム、スタンダード、グロース）" class="bg-slate-900">国内市場すべて</option>
@@ -193,7 +226,7 @@
                         </div>
 
                         <!-- ② 対象期間 -->
-                        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+                        <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
                             <label class="block text-[11px] text-slate-400 mb-1 font-bold">情報の鮮度（対象期間）</label>
                             <select id="setting-timeframe" class="w-full bg-transparent text-white text-sm focus:outline-none en-font cursor-pointer">
                                 <option value="直近24時間" class="bg-slate-900">直近24時間</option>
@@ -201,14 +234,12 @@
                                 <option value="直近1ヶ月" class="bg-slate-900" selected>直近1ヶ月</option>
                                 <option value="直近1年" class="bg-slate-900">直近1年</option>
                                 <option value="直近3年" class="bg-slate-900">直近3年</option>
-                                <option value="直近5年" class="bg-slate-900">直近5年</option>
-                                <option value="直近10年" class="bg-slate-900">直近10年</option>
                             </select>
                         </div>
 
                         <!-- ③ 1株あたりの株価設定 -->
-                        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-                            <label class="block text-[11px] text-slate-400 mb-1 font-bold">1株あたりの株価 (円) ※空欄可</label>
+                        <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
+                            <label class="block text-[11px] text-slate-400 mb-1 font-bold">1株あたりの株価(円) ※空欄可</label>
                             <div class="flex items-center space-x-2">
                                 <div class="flex items-center w-1/2">
                                     <span class="text-slate-500 mr-1 text-xs">¥</span>
@@ -223,47 +254,43 @@
                         </div>
 
                         <!-- ④ 優待・配当率 -->
-                        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-                            <label class="block text-[11px] text-slate-400 mb-1 font-bold">目標優待・配当利回り (%)</label>
+                        <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
+                            <label class="block text-[11px] text-slate-400 mb-1 font-bold">目標利回り (%)</label>
                             <div class="flex items-center">
                                 <input type="number" id="setting-yield" placeholder="0" min="0" step="0.1" value="0" class="w-full bg-transparent text-white text-sm focus:outline-none en-font">
                                 <span class="text-slate-500 ml-1">% 以上</span>
                             </div>
                         </div>
 
-                    </div>
-                </div>
-
-                <!-- 保存済み市場スキャン履歴エリア -->
-                <div id="saved-scan-area" class="mb-12 w-full max-w-4xl mx-auto hidden relative z-10 text-left">
-                    <div class="bg-gradient-to-r from-slate-900/90 to-slate-800/90 border-2 border-purple-500 rounded-2xl p-8 shadow-[0_0_40px_rgba(168,85,247,0.2)] relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl"></div>
-                        <div class="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-                            <div class="flex-grow w-full md:w-auto text-center md:text-left">
-                                <h3 class="text-xl md:text-2xl font-black text-white mb-3 flex items-center justify-center md:justify-start tracking-wide">
-                                    <i data-lucide="history" class="w-6 h-6 mr-3 text-purple-400"></i> 前回のスキャン結果から更新
-                                </h3>
-                                <div class="text-sm text-slate-300 mb-3">前回更新: <span id="saved-scan-date" class="font-bold en-font text-white bg-slate-950/50 px-3 py-1.5 rounded border border-slate-700 ml-2"></span></div>
-                                <div id="saved-scan-conditions" class="text-xs text-slate-400 line-clamp-2 leading-relaxed bg-slate-950/30 p-3 rounded"></div>
-                            </div>
-                            <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                                <button onclick="loadSavedScan()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 px-6 rounded-xl transition-colors border border-slate-600 flex justify-center items-center shadow-lg whitespace-nowrap text-lg">
-                                    <i data-lucide="book-open" class="w-5 h-5 mr-2"></i> 前回を開く
-                                </button>
-                                <button onclick="startAutoPilotMultiStep(true)" class="btn-zenith !bg-[linear-gradient(135deg,#7e22ce,#be185d)] text-white font-black py-4 px-8 rounded-xl transition-all flex justify-center items-center shadow-[0_0_30px_rgba(219,39,119,0.5)] whitespace-nowrap text-xl group transform hover:scale-105">
-                                    <i data-lucide="refresh-cw" class="w-6 h-6 mr-2 group-hover:rotate-180 transition-transform duration-500"></i> 差分更新
-                                </button>
-                            </div>
+                        <!-- ⑤ 狙いたい優待ジャンル (NEW) -->
+                        <div class="bg-amber-900/10 p-3 rounded-xl border border-amber-500/30">
+                            <label class="block text-[11px] text-amber-400 mb-1 font-bold"><i data-lucide="gift" class="w-3 h-3 inline mr-1 -mt-0.5"></i>優待ジャンル</label>
+                            <select id="setting-yutai-genre" class="w-full bg-transparent text-white text-sm focus:outline-none cursor-pointer">
+                                <option value="指定なし" class="bg-slate-900">指定なし</option>
+                                <option value="クオカード・金券" class="bg-slate-900">クオカード・金券</option>
+                                <option value="食料品・飲料" class="bg-slate-900">食料品・飲料</option>
+                                <option value="カタログギフト" class="bg-slate-900">カタログギフト</option>
+                                <option value="レジャー・割引券" class="bg-slate-900">レジャー・割引券</option>
+                            </select>
                         </div>
+
                     </div>
                 </div>
                 
-                <!-- 新規抽出ボタン -->
-                <div class="mt-8 flex flex-col items-center relative z-10">
-                    <button onclick="startAutoPilotMultiStep(false)" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-600 hover:border-slate-500 text-sm md:text-base font-bold px-8 py-4 rounded-xl inline-flex items-center justify-center w-full md:w-auto shadow-lg transition-all group">
-                        <i data-lucide="sparkles" class="w-5 h-5 mr-2 text-slate-400 group-hover:text-amber-400 transition-colors"></i> 最初からAIスキャンをやり直す
+                <!-- 2つの抽出ボタン (Yutai & Normal) -->
+                <div class="flex flex-col md:flex-row gap-4 w-full max-w-5xl mx-auto relative z-10 justify-center">
+                    
+                    <!-- 優待特化ボタン (目立たせる) -->
+                    <button onclick="startAutoPilotMultiStep(false, true)" class="w-full md:w-1/2 py-5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black rounded-2xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_30px_rgba(245,158,11,0.6)] flex flex-col items-center justify-center transform hover:-translate-y-1">
+                        <span class="flex items-center text-lg md:text-xl"><i data-lucide="gift" class="w-6 h-6 mr-2"></i> 今月の優待人気ランキングをAI検索</span>
+                        <span class="text-[11px] text-amber-100 font-bold mt-1.5 opacity-90">※直近で権利確定する人気の優待銘柄トップ20を抽出します</span>
                     </button>
-                    <p class="mt-4 text-xs text-slate-500">※設定条件を変更して1から20銘柄を抽出し直します（約15〜30秒）</p>
+                    
+                    <!-- 通常の新規スキャンボタン (控えめに) -->
+                    <button onclick="startAutoPilotMultiStep(false, false)" class="w-full md:w-1/2 py-5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-2 border-slate-600 hover:border-blue-500/50 hover:text-white font-bold rounded-2xl transition-all flex flex-col items-center justify-center">
+                        <span class="flex items-center text-lg"><i data-lucide="search" class="w-5 h-5 mr-2"></i> 条件に合うおすすめ20選を抽出</span>
+                        <span class="text-[11px] text-slate-500 font-bold mt-1.5">※上のスキャン条件をもとに全市場を分析します</span>
+                    </button>
                 </div>
             </div>
 
@@ -396,6 +423,12 @@
                         <h4 class="text-2xl font-black text-white ticker-text en-font leading-none tracking-tight">TICKER</h4>
                         <p class="text-sm text-slate-300 company-text mb-0.5 font-bold">企業名</p>
                     </div>
+                    
+                    <!-- 追加: 優待情報エリア -->
+                    <div class="text-xs text-amber-400 mt-2 mb-1 font-bold yutai-detail-text hidden bg-amber-900/20 border border-amber-500/30 p-2 rounded-lg inline-block">
+                        <i data-lucide="gift" class="w-3 h-3 inline mr-1 -mt-0.5"></i> <span class="yutai-content">優待情報</span>
+                    </div>
+
                     <p class="text-xs text-slate-400 mt-2 reason-text line-clamp-2 leading-relaxed">推奨理由がここに入ります。</p>
                 </div>
             </div>
@@ -526,23 +559,16 @@
                         <i data-lucide="binary" class="w-6 h-6 text-fuchsia-500 animate-pulse delay-500"></i>
                     </div>
                     <p class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-3 tracking-widest text-center" id="modal-loading-text">データを分析・統合中...</p>
-                    <!-- ★修正箇所: ID modal-loading-subtext を付与しました -->
                     <p id="modal-loading-subtext" class="text-sm text-slate-400 text-center max-w-md">Gemini AIが世界のニュース、非伝統的データ、シナリオを徹底分析しています...</p>
                 </div>
 
                 <div id="modal-content-data" class="hidden flex-col gap-8">
 
-                    <!-- 外部チャートリンク (TradingView iframeから変更) -->
-                    <div class="w-full flex flex-col sm:flex-row justify-between items-center bg-slate-800/30 rounded-2xl p-5 border border-slate-700/50 shadow-inner gap-4">
-                        <div class="flex items-center w-full sm:w-auto">
-                            <div class="bg-blue-500/20 p-3 rounded-xl mr-4"><i data-lucide="line-chart" class="w-6 h-6 text-blue-400"></i></div>
-                            <div>
-                                <h4 class="text-base font-bold text-white mb-0.5">最新の株価チャート・詳細データ</h4>
-                                <p class="text-[11px] text-slate-400">外部サイト (Yahoo!ファイナンス) で確認できます</p>
-                            </div>
-                        </div>
-                        <a id="modal-yahoo-link" href="#" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto bg-blue-600/80 hover:bg-blue-500 text-white text-sm font-bold py-3 px-6 rounded-xl transition-colors shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-400/30 flex items-center justify-center whitespace-nowrap">
-                            チャートを見る <i data-lucide="external-link" class="w-4 h-4 ml-2 opacity-80"></i>
+                    <!-- Yahoo Financeへの大きなリンクボタン -->
+                    <div class="mb-2">
+                        <a id="modal-yahoo-link" href="#" target="_blank" class="w-full flex flex-col md:flex-row items-center justify-center py-5 bg-gradient-to-r from-blue-900/40 to-indigo-900/40 hover:from-blue-800/60 hover:to-indigo-800/60 border border-blue-500/50 rounded-2xl text-blue-300 font-bold transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] group">
+                            <div class="flex items-center text-lg md:text-xl"><i data-lucide="external-link" class="w-6 h-6 mr-2 text-blue-400 group-hover:scale-110 transition-transform"></i> <span id="modal-yahoo-text">Yahoo!ファイナンスで最新チャートと詳細を見る</span></div>
+                            <span class="text-xs text-blue-400/70 mt-1 md:mt-0 md:ml-3">※別タブで開きます</span>
                         </a>
                     </div>
 
@@ -940,13 +966,16 @@
         function renderSavedScan() {
             const saved = JSON.parse(localStorage.getItem('autopilot_saved_scan_v1'));
             const area = document.getElementById('saved-scan-area');
+            const divider = document.getElementById('intro-divider');
             if (saved && saved.data) {
                 area.classList.remove('hidden');
+                if(divider) divider.classList.remove('hidden');
                 const date = new Date(saved.lastUpdated);
                 document.getElementById('saved-scan-date').textContent = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
                 document.getElementById('saved-scan-conditions').textContent = saved.conditionText.replace(/\n/g, ' / ');
             } else {
                 area.classList.add('hidden');
+                if(divider) divider.classList.add('hidden');
             }
         }
 
@@ -962,16 +991,17 @@
             addLog("INFO", "保存されたスキャンデータを読み込みました");
         }
 
-        async function startAutoPilotMultiStep(isUpdate = false) {
-            addLog("INFO", `【新規発掘スキャン】開始 (Update: ${isUpdate})`);
+        async function startAutoPilotMultiStep(isUpdate = false, isYutaiOnly = false) {
+            addLog("INFO", `【新規発掘スキャン】開始 (Update: ${isUpdate}, Yutai: ${isYutaiOnly})`);
             
             const segment = document.getElementById('setting-segment').value;
             const timeframe = document.getElementById('setting-timeframe').value;
             const priceMin = document.getElementById('setting-price-min').value;
             const priceMax = document.getElementById('setting-price-max').value;
             const yieldRaw = document.getElementById('setting-yield').value;
+            const yutaiGenre = document.getElementById('setting-yutai-genre').value;
             
-            window.appSettings = { segment, timeframe, priceMin, priceMax, yieldRaw };
+            window.appSettings = { segment, timeframe, priceMin, priceMax, yieldRaw, yutaiGenre };
 
             let conditionText = `検索対象市場: ${segment}\n情報の対象期間: ${timeframe}\n`;
             if (priceMin || priceMax) {
@@ -981,7 +1011,10 @@
                 conditionText += `\n`;
             }
             if (yieldRaw && parseFloat(yieldRaw) > 0) {
-                conditionText += `条件: 優待利回りまたは配当利回りが ${yieldRaw}% 以上の銘柄を優先\n`;
+                conditionText += `条件: 配当利回りが ${yieldRaw}% 以上の銘柄を優先\n`;
+            }
+            if (yutaiGenre !== "指定なし") {
+                conditionText += `条件: 「${yutaiGenre}」関連の株主優待を実施しており、かつ個人投資家からの人気が高い銘柄のみを厳選すること\n`;
             }
 
             let diffInstruction = '';
@@ -994,6 +1027,14 @@
                 }
             }
 
+            // 優待専用ボタンから呼ばれた場合の強制オーバーライド
+            if (isYutaiOnly) {
+                const currentMonth = new Date().getMonth() + 1;
+                const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+                conditionText = `条件：直近（${currentMonth}月や${nextMonth}月など）で権利確定する、個人投資家に人気の株主優待ランキング上位銘柄を検索してください。\n必ず優待の具体的な内容（例：クオカード1000円分など）も調査して出力に含めてください。`;
+                diffInstruction = ''; // 優待ボタンは差分更新を無視
+            }
+
             document.getElementById('intro-panel').style.display = 'none';
             document.getElementById('discover-results').classList.add('hidden');
             errorMsg.classList.add('hidden');
@@ -1001,6 +1042,8 @@
             loadingTitle.textContent = "AIスキャンを実行中...";
             if (isUpdate) {
                 loadingText.innerHTML = `過去のデータからの【差分】を分析・更新しています...<br><span class='text-xs text-slate-500'>前回のスキャン結果をベースに最新情報を反映します（約15〜30秒）</span>`;
+            } else if (isYutaiOnly) {
+                loadingText.innerHTML = `直近で権利確定する【人気の優待銘柄トップ20】を検索しています...<br><span class='text-xs text-slate-500'>証券サイト等の人気ランキングを解析し、一括で一覧化します（約15〜30秒）</span>`;
             } else {
                 loadingText.innerHTML = `市場のトレンドと条件に合う【おすすめ日本株20選】を抽出しています...<br><span class='text-xs text-slate-500'>市場全体を俯瞰し、一括でランキング化します（約15〜30秒）</span>`;
             }
@@ -1008,15 +1051,20 @@
             loadingPanel.classList.add('flex');
 
             try {
+                // yutaiDetail を追加したフォーマット
                 const jsonFormat = `{
                     "marketSignal": { "status": "GREEN/YELLOW/RED", "reason": "string" },
                     "sectorHeatmap": [{ "sectorName": "string", "heat": "HOT/WARM/COLD", "reason": "string" }],
-                    "ranking20": [{ "rank": 1, "ticker": "string", "companyName": "string", "sector": "string", "score": 90, "reason": "string" }]
+                    "ranking20": [{ "rank": 1, "ticker": "string", "companyName": "string", "sector": "string", "score": 90, "reason": "string", "yutaiDetail": "string" }]
                 }`;
 
+                const promptTask = isYutaiOnly 
+                    ? "\n2. 条件を満たす、今初心者が買うべき有望な【株主優待の人気ランキングTOP20銘柄】を作成してください。優待の具体的な内容(yutaiDetail)を必ず記述してください。"
+                    : "\n2. 条件を満たす、今初心者が買うべき有望な【日本株おすすめランキングTOP20銘柄】を作成してください。優待情報がない場合は yutaiDetail を \"なし\" としてください。";
+
                 const step1Payload = {
-                    contents: [{ parts: [{ text: `以下の検索条件とユーザーの要望に従って、最新の経済ニュースを分析してください。\n\n【検索条件】\n${conditionText}${diffInstruction}\n\n【指示】\n1. 指定された市場における資金流入(HOT)と流出(COLD)のヒートマップを作成してください。\n2. 条件を満たす、今初心者が買うべき有望な【日本株おすすめランキングTOP20銘柄】を作成してください。\n※ティッカーシンボルは日本の証券コード（例: 7203）のみを出力してください。\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。マークダウン(\`\`\`json)や他の文章は一切不要です。\n${jsonFormat}` }] }],
-                    systemInstruction: { parts: [{ text: "あなたは日本株に特化したプロの証券アナリストです。回答は生のJSON文字列のみを出力してください。" }] },
+                    contents: [{ parts: [{ text: `以下の検索条件とユーザーの要望に従って、最新の経済ニュースを分析してください。\n\n【検索条件】\n${conditionText}${diffInstruction}\n\n【指示】\n1. 指定された市場における資金流入(HOT)と流出(COLD)のヒートマップを作成してください。${promptTask}\n※ティッカーシンボルは日本の証券コード（例: 7203）のみを出力してください。\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。マークダウン(\`\`\`json)や他の文章は一切不要です。\n${jsonFormat}` }] }],
+                    systemInstruction: { parts: [{ text: "あなたは日本株に特化したプロの証券アナリストです。回答は生のJSON文字列のみを出力してください。優待情報が存在する場合は yutaiDetail に内容（クオカード1000円など）を記載し、無い場合は \"なし\" としてください。" }] },
                     tools: [{ googleSearch: {} }]
                 };
 
@@ -1120,6 +1168,13 @@
                     safeSetClone('.ticker-text', item.ticker);
                     safeSetClone('.company-text', item.companyName);
                     safeSetClone('.reason-text', item.reason);
+
+                    // 優待情報がある場合は表示
+                    const yutaiEl = clone.querySelector('.yutai-detail-text');
+                    if (yutaiEl && item.yutaiDetail && item.yutaiDetail !== "なし" && item.yutaiDetail !== "") {
+                        yutaiEl.classList.remove('hidden');
+                        yutaiEl.querySelector('.yutai-content').textContent = item.yutaiDetail;
+                    }
 
                     const deepBtn = clone.querySelector('.deep-scan-btn');
                     if(deepBtn) deepBtn.addEventListener('click', () => openDeepScanModal(item.ticker, item.companyName, false));
@@ -1375,8 +1430,12 @@
             
             modal.classList.remove('hidden'); setTimeout(() => modal.classList.add('opacity-100'), 10);
 
-            const yfLink = document.getElementById('modal-yahoo-link');
-            if(yfLink) yfLink.href = `https://finance.yahoo.co.jp/quote/${ticker}.T`;
+            // Yahooリンクの動的更新
+            const yahooLink = document.getElementById('modal-yahoo-link');
+            if(yahooLink) {
+                yahooLink.href = `https://finance.yahoo.co.jp/quote/${ticker}.T`;
+                safeSetText('modal-yahoo-text', `${companyName} (${ticker}) の最新チャートと詳細を見る`);
+            }
 
             const savedReports = getSavedReports();
             
@@ -1402,7 +1461,6 @@
                 const isDiffUpdate = forceUpdate && savedReports[ticker];
                 const existingData = isDiffUpdate ? savedReports[ticker].data : null;
                 
-                // ★修正箇所: ID nullエラーを防ぐため safeSetText 関数を使用するように変更しました
                 if (isDiffUpdate) {
                     const lastDate = new Date(savedReports[ticker].lastUpdated).toLocaleDateString('ja-JP');
                     diffInstruction = `\n\n【重要: 差分アップデート】前回の調査日「${lastDate}」以降の最新情報を検索・アップデートしてください。※事業内容などの基本データは不要です。`;
