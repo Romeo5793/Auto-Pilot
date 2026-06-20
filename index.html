@@ -70,11 +70,18 @@
         .impact-LOW { color: #94a3b8; }
 
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* スクロールバーのスタイル調整 */
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
         
+        /* 条件テキストエリア用の細いスクロールバー */
+        .thin-scrollbar::-webkit-scrollbar { width: 4px; }
+        .thin-scrollbar::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.3); }
+        .thin-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(168, 85, 247, 0.6); }
+
         .main-tab {
             padding: 0.75rem 1.5rem; border-bottom: 2px solid transparent; color: #64748b; font-weight: bold;
             transition: all 0.3s; cursor: pointer; display: flex; align-items: center;
@@ -184,18 +191,19 @@
                     </h3>
                     <div class="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/50 rounded-2xl p-4 sm:p-5 md:p-6 shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(219,39,119,0.5)] transition-all relative overflow-hidden">
                         <div class="absolute -right-10 -bottom-10 opacity-10"><i data-lucide="radar" class="w-64 h-64"></i></div>
-                        <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 sm:gap-6 relative z-10">
-                            <div class="flex-grow">
+                        <div class="flex flex-col md:flex-row justify-between gap-4 sm:gap-6 relative z-10">
+                            <div class="flex-grow max-w-full md:max-w-[55%]">
                                 <div class="text-sm text-purple-300 mb-2 font-bold flex items-center">
                                     <i data-lucide="history" class="w-4 h-4 mr-1 shrink-0"></i> 前回更新: <span id="saved-scan-date" class="text-white en-font ml-1"></span>
                                 </div>
-                                <div id="saved-scan-conditions" class="text-xs text-slate-300 line-clamp-2 sm:line-clamp-none leading-relaxed bg-slate-900/50 p-3 rounded-lg border border-slate-700/50"></div>
+                                <!-- 変更点：スクロール可能エリアに -->
+                                <div id="saved-scan-conditions" class="text-[11px] sm:text-xs text-slate-300 leading-relaxed bg-slate-950/60 p-3 sm:p-4 rounded-lg border border-slate-700/50 max-h-24 overflow-y-auto thin-scrollbar break-words whitespace-pre-wrap"></div>
                             </div>
-                            <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0 mt-2 md:mt-0">
-                                <button onclick="loadSavedScan()" class="px-4 sm:px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors border border-slate-600 flex justify-center items-center shadow-lg text-sm sm:text-base w-full sm:w-auto">
+                            <div class="flex flex-col sm:flex-row md:flex-col gap-3 w-full md:w-auto shrink-0 justify-center">
+                                <button onclick="loadSavedScan()" class="px-4 sm:px-6 py-3 md:py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors border border-slate-600 flex justify-center items-center shadow-lg text-sm sm:text-base w-full">
                                     <i data-lucide="book-open" class="w-4 h-4 mr-2 shrink-0"></i> そのまま開く
                                 </button>
-                                <button onclick="startAutoPilotMultiStep(true)" class="px-4 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black rounded-xl transition-all shadow-lg flex justify-center items-center transform hover:scale-105 text-sm sm:text-base w-full sm:w-auto">
+                                <button onclick="startAutoPilotMultiStep(true)" class="px-4 sm:px-8 py-3 md:py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black rounded-xl transition-all shadow-lg flex justify-center items-center transform hover:scale-105 text-sm sm:text-base w-full">
                                     <i data-lucide="sparkles" class="w-4 h-4 sm:w-5 sm:h-5 mr-2 shrink-0"></i> 最新情報で差分更新
                                 </button>
                             </div>
