@@ -233,31 +233,37 @@
 
                     </div>
                 </div>
-                
-                <button onclick="startAutoPilotMultiStep(false)" class="btn-zenith text-white text-2xl font-black px-12 py-8 rounded-full inline-flex items-center justify-center w-full md:w-auto shadow-2xl relative z-10">
-                    <i data-lucide="sparkles" class="w-8 h-8 mr-3"></i> AIおすすめ20選を抽出する
-                </button>
-                <p class="mt-8 text-sm text-slate-500 relative z-10">※条件に合う日本株トップ20を高速でランキング化します（約15〜30秒）</p>
 
                 <!-- 保存済み市場スキャン履歴エリア -->
-                <div id="saved-scan-area" class="mt-8 w-full max-w-4xl mx-auto hidden relative z-10 text-left">
-                    <h3 class="text-sm font-bold text-slate-400 mb-3 flex items-center tracking-wide">
-                        <i data-lucide="history" class="w-4 h-4 mr-2"></i> 前回のスキャン結果
-                    </h3>
-                    <div class="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-4 hover:bg-slate-800/50 transition-colors">
-                        <div>
-                            <div class="text-[10px] text-slate-500 mb-1">前回更新: <span id="saved-scan-date" class="text-slate-300 font-bold en-font ml-1"></span></div>
-                            <div id="saved-scan-conditions" class="text-xs text-slate-400 line-clamp-2 leading-relaxed"></div>
-                        </div>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="loadSavedScan()" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold py-2.5 px-4 rounded-lg transition-colors border border-slate-600 flex justify-center items-center whitespace-nowrap">
-                                <i data-lucide="book-open" class="w-3 h-3 mr-1.5"></i> 開く
-                            </button>
-                            <button onclick="startAutoPilotMultiStep(true)" class="flex-1 sm:flex-none bg-purple-900/40 hover:bg-purple-800/60 text-purple-300 text-xs font-bold py-2.5 px-4 rounded-lg transition-colors border border-purple-500/40 flex justify-center items-center whitespace-nowrap group-hover:shadow-[0_0_10px_rgba(168,85,247,0.3)]">
-                                <i data-lucide="refresh-cw" class="w-3 h-3 mr-1.5 text-purple-400"></i> 差分更新
-                            </button>
+                <div id="saved-scan-area" class="mb-12 w-full max-w-4xl mx-auto hidden relative z-10 text-left">
+                    <div class="bg-gradient-to-r from-slate-900/90 to-slate-800/90 border-2 border-purple-500 rounded-2xl p-8 shadow-[0_0_40px_rgba(168,85,247,0.2)] relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl"></div>
+                        <div class="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                            <div class="flex-grow w-full md:w-auto text-center md:text-left">
+                                <h3 class="text-xl md:text-2xl font-black text-white mb-3 flex items-center justify-center md:justify-start tracking-wide">
+                                    <i data-lucide="history" class="w-6 h-6 mr-3 text-purple-400"></i> 前回のスキャン結果から更新
+                                </h3>
+                                <div class="text-sm text-slate-300 mb-3">前回更新: <span id="saved-scan-date" class="font-bold en-font text-white bg-slate-950/50 px-3 py-1.5 rounded border border-slate-700 ml-2"></span></div>
+                                <div id="saved-scan-conditions" class="text-xs text-slate-400 line-clamp-2 leading-relaxed bg-slate-950/30 p-3 rounded"></div>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                                <button onclick="loadSavedScan()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 px-6 rounded-xl transition-colors border border-slate-600 flex justify-center items-center shadow-lg whitespace-nowrap text-lg">
+                                    <i data-lucide="book-open" class="w-5 h-5 mr-2"></i> 前回を開く
+                                </button>
+                                <button onclick="startAutoPilotMultiStep(true)" class="btn-zenith !bg-[linear-gradient(135deg,#7e22ce,#be185d)] text-white font-black py-4 px-8 rounded-xl transition-all flex justify-center items-center shadow-[0_0_30px_rgba(219,39,119,0.5)] whitespace-nowrap text-xl group transform hover:scale-105">
+                                    <i data-lucide="refresh-cw" class="w-6 h-6 mr-2 group-hover:rotate-180 transition-transform duration-500"></i> 差分更新
+                                </button>
+                            </div>
                         </div>
                     </div>
+                </div>
+                
+                <!-- 新規抽出ボタン -->
+                <div class="mt-8 flex flex-col items-center relative z-10">
+                    <button onclick="startAutoPilotMultiStep(false)" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-600 hover:border-slate-500 text-sm md:text-base font-bold px-8 py-4 rounded-xl inline-flex items-center justify-center w-full md:w-auto shadow-lg transition-all group">
+                        <i data-lucide="sparkles" class="w-5 h-5 mr-2 text-slate-400 group-hover:text-amber-400 transition-colors"></i> 最初からAIスキャンをやり直す
+                    </button>
+                    <p class="mt-4 text-xs text-slate-500">※設定条件を変更して1から20銘柄を抽出し直します（約15〜30秒）</p>
                 </div>
             </div>
 
@@ -520,13 +526,24 @@
                         <i data-lucide="binary" class="w-6 h-6 text-fuchsia-500 animate-pulse delay-500"></i>
                     </div>
                     <p class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-3 tracking-widest text-center" id="modal-loading-text">データを分析・統合中...</p>
-                    <p class="text-sm text-slate-400 text-center max-w-md">Gemini AIが世界のニュース、非伝統的データ、シナリオを徹底分析しています...</p>
+                    <!-- ★修正箇所: ID modal-loading-subtext を付与しました -->
+                    <p id="modal-loading-subtext" class="text-sm text-slate-400 text-center max-w-md">Gemini AIが世界のニュース、非伝統的データ、シナリオを徹底分析しています...</p>
                 </div>
 
                 <div id="modal-content-data" class="hidden flex-col gap-8">
 
-                    <!-- リアルタイム折れ線グラフ (安全なIframe方式) -->
-                    <div class="w-full h-[300px] md:h-[400px] rounded-2xl overflow-hidden border border-slate-700/50 bg-[#131722] shadow-[0_0_20px_rgba(0,0,0,0.5)]" id="tv-chart-container">
+                    <!-- 外部チャートリンク (TradingView iframeから変更) -->
+                    <div class="w-full flex flex-col sm:flex-row justify-between items-center bg-slate-800/30 rounded-2xl p-5 border border-slate-700/50 shadow-inner gap-4">
+                        <div class="flex items-center w-full sm:w-auto">
+                            <div class="bg-blue-500/20 p-3 rounded-xl mr-4"><i data-lucide="line-chart" class="w-6 h-6 text-blue-400"></i></div>
+                            <div>
+                                <h4 class="text-base font-bold text-white mb-0.5">最新の株価チャート・詳細データ</h4>
+                                <p class="text-[11px] text-slate-400">外部サイト (Yahoo!ファイナンス) で確認できます</p>
+                            </div>
+                        </div>
+                        <a id="modal-yahoo-link" href="#" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto bg-blue-600/80 hover:bg-blue-500 text-white text-sm font-bold py-3 px-6 rounded-xl transition-colors shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-400/30 flex items-center justify-center whitespace-nowrap">
+                            チャートを見る <i data-lucide="external-link" class="w-4 h-4 ml-2 opacity-80"></i>
+                        </a>
                     </div>
 
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-2">
@@ -1351,11 +1368,8 @@
             
             modal.classList.remove('hidden'); setTimeout(() => modal.classList.add('opacity-100'), 10);
 
-            let tvTicker = ticker;
-            if (/^\d{4}$/.test(ticker)) { tvTicker = `TSE:${ticker}`; } else if (/^\d{4}\.T$/i.test(ticker)) { tvTicker = `TSE:${ticker.replace(/\.T$/i, '')}`; }
-
-            const tvContainer = document.getElementById('tv-chart-container');
-            if(tvContainer) { tvContainer.innerHTML = `<iframe src="https://s.tradingview.com/widgetembed/?symbol=${tvTicker}&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=131722&theme=dark&style=3&timezone=Asia%2FTokyo&locale=ja" width="100%" height="100%" frameborder="0" allowtransparency="true" scrolling="no" allowfullscreen=""></iframe>`; }
+            const yfLink = document.getElementById('modal-yahoo-link');
+            if(yfLink) yfLink.href = `https://finance.yahoo.co.jp/quote/${ticker}.T`;
 
             const savedReports = getSavedReports();
             
@@ -1381,12 +1395,13 @@
                 const isDiffUpdate = forceUpdate && savedReports[ticker];
                 const existingData = isDiffUpdate ? savedReports[ticker].data : null;
                 
+                // ★修正箇所: ID nullエラーを防ぐため safeSetText 関数を使用するように変更しました
                 if (isDiffUpdate) {
                     const lastDate = new Date(savedReports[ticker].lastUpdated).toLocaleDateString('ja-JP');
                     diffInstruction = `\n\n【重要: 差分アップデート】前回の調査日「${lastDate}」以降の最新情報を検索・アップデートしてください。※事業内容などの基本データは不要です。`;
-                    document.getElementById('modal-loading-subtext').textContent = "過去のデータと最新のニュースを照合し、差分のみを更新しています...";
+                    safeSetText('modal-loading-subtext', "過去のデータと最新のニュースを照合し、差分のみを更新しています...");
                 } else {
-                    document.getElementById('modal-loading-subtext').textContent = "Gemini AIが世界のニュース、非伝統的データ、シナリオを徹底分析しています...";
+                    safeSetText('modal-loading-subtext', "Gemini AIが世界のニュース、非伝統的データ、シナリオを徹底分析しています...");
                 }
 
                 const jsonFormatObj = {
