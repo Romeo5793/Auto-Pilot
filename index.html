@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI AUTO-PILOT (Japan & US Edition v6.4)</title>
+    <title>AI AUTO-PILOT (Japan & US Edition v6.5)</title>
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -140,7 +140,7 @@
                     <i data-lucide="infinity" class="w-6 h-6 text-white"></i>
                 </div>
                 <h1 class="text-xl md:text-2xl font-black en-font tracking-tighter text-white">
-                    AUTO-PILOT<span class="ml-2 text-sm text-purple-400 font-bold hidden sm:inline"> JP & US</span>
+                    AUTO-PILOT<span class="ml-2 text-sm text-purple-400 font-bold hidden sm:inline"> JP & US v6.5</span>
                 </h1>
             </div>
             <button onclick="resetApiKey()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors" title="キーをリセット">
@@ -847,14 +847,32 @@
         function safeSetText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text || "---"; }
 
         function extractJSON(str) {
+            // ① そのままパースを試行
             try { return JSON.parse(str); } catch(e) {}
-            const startObj = str.indexOf('{'); const startArr = str.indexOf('[');
-            const endObj = str.lastIndexOf('}'); const endArr = str.lastIndexOf(']');
+            
+            // ② マークダウン記法 (```json ... ```) を除去して試行
+            let cleanStr = str.replace(/```json/gi, '').replace(/```/g, '').trim();
+            try { return JSON.parse(cleanStr); } catch(e) {}
+            
+            // ③ 波括弧 {} または大括弧 [] で囲まれた部分を強引に抽出して試行
+            const startObj = cleanStr.indexOf('{'); const startArr = cleanStr.indexOf('[');
+            const endObj = cleanStr.lastIndexOf('}'); const endArr = cleanStr.lastIndexOf(']');
             let start = -1; let end = -1;
+            
             if (startObj !== -1 && startArr !== -1) { start = Math.min(startObj, startArr); } else { start = Math.max(startObj, startArr); }
             if (endObj !== -1 && endArr !== -1) { end = Math.max(endObj, endArr); } else { end = Math.max(endObj, endArr); }
+            
             if (start !== -1 && end !== -1 && end >= start) {
-                try { return JSON.parse(str.substring(start, end + 1)); } catch(e) {}
+                const finalStr = cleanStr.substring(start, end + 1);
+                try { 
+                    return JSON.parse(finalStr); 
+                } catch(e) {
+                    // ★ロギング強化：エラー発生時に生データを記録して調査に役立てる
+                    addLog("WARN", "JSONパースに失敗しました（抽出文字列の解析エラー）", { rawString: str, parsedSubstring: finalStr, error: e.message });
+                }
+            } else {
+                // ★ロギング強化
+                addLog("WARN", "JSONの括弧が見つかりません", { rawString: str });
             }
             throw new Error("AIがJSONフォーマットで回答しませんでした。再度お試しください。");
         }
@@ -928,7 +946,7 @@
         }
 
         // ==========================================
-        // ★コア機能：新規発掘スキャン（米国株・API節約対応済）
+        // ★コア機能：新規発掘スキャン
         // ==========================================
         async function startAutoPilotMultiStep(isUpdate = false, isYutaiOnly = false, isUsStock = false) {
             addLog("INFO", `【新規発掘スキャン】開始 (Update: ${isUpdate}, Yutai: ${isYutaiOnly}, US: ${isUsStock})`);
@@ -1063,7 +1081,9 @@
                 const step1Payload = {
                     contents: [{ parts: [{ text: `以下の検索条件とユーザーの要望に従って、最新の経済ニュースを分析してください。\n\n【検索条件】\n${conditionText}${diffInstruction}\n\n【指示】\n1. 指定された市場における資金流入(HOT)と流出(COLD)のヒートマップを作成してください。${promptTask}\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。マークダウン(\`\`\`json)や他の文章は一切不要です。\n${jsonFormat}` }] }],
                     systemInstruction: { parts: [{ text: sysInst }] },
-                    tools: [{ googleSearch: {} }]
+                    tools: [{ googleSearch: {} }],
+                    // ★ 根本治療：APIにJSON出力を強制する設定を追加
+                    generationConfig: { responseMimeType: "application/json" }
                 };
 
                 const step1Result = await callGeminiAPI(step1Payload);
@@ -1350,7 +1370,9 @@
                 const payloadTotal = {
                     contents: [{ parts: [{ text: `保有銘柄リスト（${tickersStr}）の「相関性・偏りリスク」を診断してください。\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n{ "correlationRisk": "string" }` }] }],
                     systemInstruction: { parts: [{ text: "プロのマネージャーとして出力。回答はJSONのみ。" }] },
-                    tools: [{ googleSearch: {} }]
+                    tools: [{ googleSearch: {} }],
+                    // ★ 根本治療：APIにJSON出力を強制する設定を追加
+                    generationConfig: { responseMimeType: "application/json" }
                 };
                 
                 const resultTotal = await callGeminiAPI(payloadTotal);
@@ -1370,7 +1392,9 @@
                     const payloadSingle = {
                         contents: [{ parts: [{ text: `証券コードまたはティッカー「${asset.ticker}」の最新アクション判定（BUY/HOLD/SELL）と簡潔なアドバイスを出力せよ。\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n{ "verdict": "BUY/HOLD/SELL", "advice": "string" }` }] }],
                         systemInstruction: { parts: [{ text: "プロのアナリストとして出力。回答はJSONのみ。" }] },
-                        tools: [{ googleSearch: {} }]
+                        tools: [{ googleSearch: {} }],
+                        // ★ 根本治療：APIにJSON出力を強制する設定を追加
+                        generationConfig: { responseMimeType: "application/json" }
                     };
 
                     try {
@@ -1429,6 +1453,7 @@
             btnElement.disabled = true; resultElement.classList.add('hidden'); lucide.createIcons();
 
             try {
+                // ※こちらはプレーンテキストでの回答を期待するため、JSONモードは追加しません
                 const payload = {
                     contents: [{ parts: [{ text: `証券コードまたはティッカー「${ticker}」の今日の株価がなぜ動いているのかを検索し、投資初心者に向けて1〜2文で優しく教えてください。` }] }],
                     systemInstruction: { parts: [{ text: "優しく分かりやすい口調で。プレーンテキストで出力。" }] },
@@ -1584,7 +1609,9 @@
                 const payload = {
                     contents: [{ parts: [{ text: `${basePromptText}\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。他の文章やマークダウン記法(\`\`\`json)は一切不要です。\n${JSON.stringify(jsonFormatObj, null, 2)}` }] }],
                     systemInstruction: { parts: [{ text: "最高峰の専属アナリストAI。回答は純粋なJSON文字列のみ。" }] },
-                    tools: [{ googleSearch: {} }]
+                    tools: [{ googleSearch: {} }],
+                    // ★ 根本治療：APIにJSON出力を強制する設定を追加
+                    generationConfig: { responseMimeType: "application/json" }
                 };
                 
                 const result = await callGeminiAPI(payload);
