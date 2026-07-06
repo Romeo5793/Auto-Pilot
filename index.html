@@ -1365,58 +1365,69 @@
             const assets = getMyAssets();
             if(assets.length === 0) return;
 
-            addLog("INFO", "【ポートフォリオ診断】開始");
+            addLog("INFO", "【ポートフォリオ診断】開始 (一括処理版)");
             errorMsg.classList.add('hidden');
-            loadingTitle.textContent = "個別銘柄を順次分析中...";
+            loadingTitle.textContent = "ポートフォリオ全体を一括分析中...";
             loadingPanel.classList.remove('hidden'); loadingPanel.classList.add('flex');
 
             try {
                 const tickersStr = assets.map(a => a.ticker).join(', ');
-                loadingText.textContent = "ポートフォリオ全体の相関性とリスクを診断中...";
-                const payloadTotal = {
-                    contents: [{ parts: [{ text: `保有銘柄リスト（${tickersStr}）の「相関性・偏りリスク」を診断してください。\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n{ "correlationRisk": "string" }` }] }],
+                loadingText.innerHTML = `保有する全${assets.length}銘柄（${tickersStr}）をAIがまとめて診断しています...<br><span class="text-xs text-slate-500">※APIコスト削減のため、1回の通信で全銘柄を処理します</span>`;
+                
+                // 全体リスクと全個別銘柄の評価を1回のAPI呼び出しで取得するプロンプト
+                const payloadBatch = {
+                    contents: [{ parts: [{ text: `以下の保有銘柄リスト（${tickersStr}）について、最新情報を検索した上で、以下の2点を実行してください。
+1. ポートフォリオ全体の「相関性・偏りリスク」の診断
+2. 各個別銘柄の最新アクション判定（BUY/HOLD/SELL）と簡潔なアドバイス
+
+【出力形式】
+必ず以下のJSONフォーマットのみを出力してください。
+{
+  "correlationRisk": "string (ポートフォリオ全体のリスク診断テキスト)",
+  "individualVerdicts": [
+    { "ticker": "string", "verdict": "BUY/HOLD/SELL", "advice": "string" }
+  ]
+}` }] }],
                     systemInstruction: { parts: [{ text: "プロのマネージャーとして出力。回答はJSONのみ。" }] },
                     tools: [{ googleSearch: {} }],
-                    // ★ 根本治療：APIにJSON出力を強制する設定を追加
                     generationConfig: { responseMimeType: "application/json" }
                 };
                 
-                const resultTotal = await callGeminiAPI(payloadTotal);
-                const aiDataTotal = extractJSON(resultTotal.candidates[0].content.parts[0].text);
+                const resultBatch = await callGeminiAPI(payloadBatch);
+                const aiDataBatch = extractJSON(resultBatch.candidates[0].content.parts[0].text);
                 
+                // 1. 全体リスクのUI更新
                 const commentEl = document.getElementById('my-market-commentary');
-                safeSetText('my-commentary-text', aiDataTotal.correlationRisk);
+                safeSetText('my-commentary-text', aiDataBatch.correlationRisk || "全体診断データが取得できませんでした。");
                 if(commentEl) commentEl.classList.remove('hidden');
 
                 const portfolioSpeakBtn = document.getElementById('portfolio-speak-btn');
-                if(portfolioSpeakBtn) portfolioSpeakBtn.onclick = () => speakText(aiDataTotal.correlationRisk, portfolioSpeakBtn);
-
-                for (let i = 0; i < assets.length; i++) {
-                    const asset = assets[i];
-                    loadingText.innerHTML = `個別分析中... <span class="text-purple-400 font-bold">${i + 1} / ${assets.length}</span><br><span class="text-xs text-slate-500">銘柄: ${asset.ticker}</span>`;
-                    
-                    const payloadSingle = {
-                        contents: [{ parts: [{ text: `証券コードまたはティッカー「${asset.ticker}」の最新アクション判定（BUY/HOLD/SELL）と簡潔なアドバイスを出力せよ。\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n{ "verdict": "BUY/HOLD/SELL", "advice": "string" }` }] }],
-                        systemInstruction: { parts: [{ text: "プロのアナリストとして出力。回答はJSONのみ。" }] },
-                        tools: [{ googleSearch: {} }],
-                        // ★ 根本治療：APIにJSON出力を強制する設定を追加
-                        generationConfig: { responseMimeType: "application/json" }
-                    };
-
-                    try {
-                        const resultSingle = await callGeminiAPI(payloadSingle);
-                        const dataSingle = extractJSON(resultSingle.candidates[0].content.parts[0].text);
-                        
-                        assets[i].verdict = dataSingle.verdict; assets[i].advice = dataSingle.advice;
-                        saveMyAssets(assets); renderMyPortfolio(); 
-                    } catch (err) {
-                        addLog("WARN", `【ポートフォリオ診断】個別銘柄(${asset.ticker})の分析に失敗`, err.message);
-                        assets[i].verdict = "ERROR"; assets[i].advice = "分析に失敗しました。後で再試行してください。";
-                    }
-                    // 安定した稼働のため、待機時間を4秒に延長
-                    if (i < assets.length - 1) await new Promise(r => setTimeout(r, 4000));
+                if(portfolioSpeakBtn && aiDataBatch.correlationRisk) {
+                    portfolioSpeakBtn.onclick = () => speakText(aiDataBatch.correlationRisk, portfolioSpeakBtn);
                 }
-                addLog("INFO", "【ポートフォリオ診断】完了");
+
+                // 2. 個別銘柄のデータ更新
+                if (aiDataBatch.individualVerdicts && Array.isArray(aiDataBatch.individualVerdicts)) {
+                    for (let i = 0; i < assets.length; i++) {
+                        const asset = assets[i];
+                        // APIの戻り値から該当ティッカーのデータを探す
+                        const verdictData = aiDataBatch.individualVerdicts.find(v => v.ticker.toUpperCase() === asset.ticker.toUpperCase());
+                        
+                        if (verdictData) {
+                            assets[i].verdict = verdictData.verdict;
+                            assets[i].advice = verdictData.advice;
+                        } else {
+                            assets[i].verdict = "HOLD"; // 取得できなかった場合のフォールバック
+                            assets[i].advice = "個別データが取得できませんでした。";
+                        }
+                    }
+                    saveMyAssets(assets);
+                    renderMyPortfolio(); 
+                } else {
+                    throw new Error("個別銘柄のデータがAIから返却されませんでした。");
+                }
+                
+                addLog("INFO", "【ポートフォリオ診断】完了 (一括処理版)");
 
             } catch (error) {
                 addLog("ERROR", "【ポートフォリオ診断】失敗", error.message);
@@ -1433,7 +1444,6 @@
                 loadingPanel.classList.add('hidden'); loadingPanel.classList.remove('flex');
             }
         }
-
         const CacheSystem = {
             get: (key, maxAge = 21600000) => {
                 const itemStr = localStorage.getItem(`autopilot_cache_${key}`);
