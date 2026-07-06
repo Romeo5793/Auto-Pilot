@@ -772,7 +772,7 @@
                 if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
                 const data = await response.json();
                 const availableModels = data.models.map(m => m.name.replace('models/', ''));
-                const preferredModels = [''gemini-2.5-flash-preview-09-2025', 'gemini-2.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
+                const preferredModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash-preview-09-2025', 'gemini-2.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
                 for (const preferred of preferredModels) {
                     if (availableModels.includes(preferred)) { currentBestModel = preferred; addLog("INFO", `モデルを選定しました: ${currentBestModel}`); return currentBestModel; }
                 }
