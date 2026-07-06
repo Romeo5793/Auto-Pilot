@@ -765,8 +765,8 @@
         
         let currentBestModel = null;
         async function getBestModel() {
-    // デバッグのため、一旦キャッシュを使わず毎回取得するようにします
-    // if (currentBestModel) return currentBestModel; 
+    // キャッシュを有効化し、無駄なAPI呼び出しを防ぐ
+    if (currentBestModel) return currentBestModel; 
     
     addLog("INFO", "AIモデルの自動選定を開始します");
     try {
@@ -1414,7 +1414,8 @@
                         addLog("WARN", `【ポートフォリオ診断】個別銘柄(${asset.ticker})の分析に失敗`, err.message);
                         assets[i].verdict = "ERROR"; assets[i].advice = "分析に失敗しました。後で再試行してください。";
                     }
-                    if (i < assets.length - 1) await new Promise(r => setTimeout(r, 1500));
+                    // 無料APIの制限(15RPM)を回避するため、待機時間を4秒に延長
+                    if (i < assets.length - 1) await new Promise(r => setTimeout(r, 4000));
                 }
                 addLog("INFO", "【ポートフォリオ診断】完了");
 
