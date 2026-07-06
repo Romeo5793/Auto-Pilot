@@ -776,11 +776,11 @@
                 for (const preferred of preferredModels) {
                     if (availableModels.includes(preferred)) { currentBestModel = preferred; addLog("INFO", `モデルを選定しました: ${currentBestModel}`); return currentBestModel; }
                 }
-                currentBestModel = availableModels.find(m => m.includes('flash')) || 'gemini-1.5-flash';
+                currentBestModel = availableModels.find(m => m.includes('flash')) || 'gemini-3.1-flash-lite';
                 addLog("WARN", `優先モデルが見つからないためフォールバック: ${currentBestModel}`); return currentBestModel;
             } catch (e) {
                 addLog("WARN", "モデル一覧の取得に失敗。デフォルトを使用。", e.message);
-                currentBestModel = 'gemini-1.5-flash'; return currentBestModel;
+                currentBestModel = 'gemini-3.1-flash-lite'; return currentBestModel;
             }
         }
 
