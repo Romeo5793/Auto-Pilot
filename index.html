@@ -83,12 +83,10 @@
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
         
-        /* 枠内スクロールバー用 */
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 2px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.4); border-radius: 2px; }
 
-        /* --- 追加分 --- */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .break-words { word-wrap: break-word; overflow-wrap: break-word; }
@@ -437,9 +435,6 @@
         const appLogs = [];
         function addLog(level, message, details = "") { console.log(`[${level}] ${message}`, details); }
 
-        // ==========================================
-        // APIキー管理と認証UI
-        // ==========================================
         let apiKey = localStorage.getItem('autopilot_api_key') || "";
         let finnhubKey = localStorage.getItem('finnhub_api_key') || "";
         let alphaKey = localStorage.getItem('alphavantage_api_key') || "";
@@ -495,9 +490,6 @@
             document.getElementById(tabId).classList.add('active');
         }
 
-        // ==========================================
-        // 外部APIからのデータ取得（Google検索の代替）
-        // ==========================================
         async function fetchFinnhubData(ticker) {
             if (!finnhubKey) return "";
             try {
@@ -531,9 +523,6 @@
             } catch(e) { return "取得失敗"; }
         }
 
-        // ==========================================
-        // Gemini API呼び出し (フォールバック搭載)
-        // ==========================================
         const GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
         
         async function callGeminiAPI(payload) {
@@ -570,9 +559,6 @@
             throw new Error("JSONパース失敗");
         }
 
-        // ==========================================
-        // メイン機能1: 新規発掘スキャン (Google検索排除版)
-        // ==========================================
         async function startAutoPilotMultiStep(isUpdate = false, isYutaiOnly = false, isUsStock = false) {
             const segment = document.getElementById('setting-segment').value;
             const timeframe = document.getElementById('setting-timeframe').value;
@@ -613,10 +599,43 @@
             }
         }
 
+        // --- 修復: ヒートマップやシグナルを画面に描画する処理を追加 ---
         function renderDiscoverResults(data) {
+            // 1. シグナルの反映
+            if (data.marketSignal) {
+                const signalColor = document.getElementById('signal-color');
+                const signalText = document.getElementById('signal-text');
+                const signalReason = document.getElementById('signal-reason');
+                
+                signalText.textContent = data.marketSignal.status;
+                signalReason.textContent = data.marketSignal.reason;
+                
+                signalColor.className = 'w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_currentColor]';
+                if (data.marketSignal.status === 'GREEN') signalColor.classList.add('text-green-400', 'bg-green-900/30');
+                else if (data.marketSignal.status === 'YELLOW') signalColor.classList.add('text-yellow-400', 'bg-yellow-900/30');
+                else if (data.marketSignal.status === 'RED') signalColor.classList.add('text-red-400', 'bg-red-900/30');
+            }
+
+            // 2. ヒートマップの反映
+            if (data.sectorHeatmap && data.sectorHeatmap.length > 0) {
+                const heatmapContainer = document.getElementById('heatmap-container');
+                heatmapContainer.innerHTML = '';
+                data.sectorHeatmap.forEach(sector => {
+                    let hClass = 'bg-slate-800';
+                    if (sector.heat === 'HOT') hClass = 'heat-hot';
+                    else if (sector.heat === 'WARM') hClass = 'heat-warm';
+                    else if (sector.heat === 'COLD') hClass = 'heat-cold';
+
+                    const div = document.createElement('div');
+                    div.className = `p-3 rounded-xl border flex flex-col justify-center items-center text-center ${hClass}`;
+                    div.innerHTML = `<span class="text-[11px] font-bold text-white mb-1">${sector.sectorName}</span><span class="text-[9px] text-slate-300 line-clamp-2">${sector.reason}</span>`;
+                    heatmapContainer.appendChild(div);
+                });
+            }
+
+            // 3. リストの反映
             const listContainer = document.getElementById('portfolio-list');
             listContainer.innerHTML = '';
-            
             if (data.ranking20) {
                 data.ranking20.forEach((item) => {
                     const template = document.getElementById('ranking-card-template');
@@ -635,9 +654,6 @@
             setTimeout(() => { document.getElementById('discover-results').style.opacity = '1'; lucide.createIcons(); }, 100);
         }
 
-        // ==========================================
-        // メイン機能2: ポートフォリオ全体一括診断
-        // ==========================================
         function getMyAssets() { return JSON.parse(localStorage.getItem('my_assets_v1') || '[]'); }
         function saveMyAssets(assets) { localStorage.setItem('my_assets_v1', JSON.stringify(assets)); }
 
@@ -730,13 +746,11 @@
             }
         }
 
-        // ==========================================
-        // メイン機能3: 個別銘柄の企業カルテ (ディープスキャン)
-        // ==========================================
-        let currentRadarChart = null; // チャート保持用
+        let currentRadarChart = null;
 
         async function openDeepScanModal(ticker, companyName) {
             document.getElementById('modal-title').textContent = ticker;
+            document.getElementById('modal-subtitle').textContent = companyName || "企業データ";
             document.getElementById('deep-scan-modal').classList.remove('hidden');
             setTimeout(() => document.getElementById('deep-scan-modal').classList.add('opacity-100'), 10);
             
@@ -773,6 +787,7 @@
                 document.getElementById('modal-decision-badge').textContent = rawData.finalVerdict.decision;
                 document.getElementById('modal-final-conclusion').textContent = rawData.finalVerdict.conclusion;
                 
+                // --- 修復: グラフの設定（凡例非表示・数値非表示）を追加 ---
                 if(rawData.radarScores) {
                     const ctx = document.getElementById('radarChart').getContext('2d');
                     
@@ -785,16 +800,26 @@
                         data: { 
                             labels: ['成長', '割安', '勢い', '安全', 'マクロ'], 
                             datasets: [{ 
+                                label: 'AI評価スコア', 
                                 data: [rawData.radarScores.growth, rawData.radarScores.value, rawData.radarScores.momentum, rawData.radarScores.safety, rawData.radarScores.macroTailwind], 
                                 borderColor: '#a855f7',
-                                backgroundColor: 'rgba(168, 85, 247, 0.2)'
+                                backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                                pointBackgroundColor: '#a855f7'
                             }] 
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
                             scales: {
-                                r: { min: 0, max: 100, ticks: { display: false } }
+                                r: { 
+                                    min: 0, 
+                                    max: 100, 
+                                    ticks: { display: false },
+                                    pointLabels: { color: '#cbd5e1', font: { size: 11 } }
+                                }
                             }
                         }
                     });
@@ -815,9 +840,6 @@
             setTimeout(() => document.getElementById('deep-scan-modal').classList.add('hidden'), 300); 
         });
 
-        // ==========================================
-        // メイン機能4: なぜ動いた？ (テキスト検索)
-        // ==========================================
         async function explainPriceMovement(ticker, btnElement, resultElement) {
             btnElement.innerHTML = `最新ニュースを検索中...`;
             btnElement.disabled = true; resultElement.classList.add('hidden');
