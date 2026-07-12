@@ -7,12 +7,34 @@ const CACHE_TIME = 15 * 60 * 1000; // 15分（ミリ秒）
 const GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite']; 
 
 // ==========================================
-// 1. メイン処理（検索ボタンが押された時にこれを呼び出します）
-// 例: <button onclick="startAnalysis('AAPL')">検索</button>
+// 1. メイン処理
 // ==========================================
 async function startAnalysis(ticker) {
+    // --------------------------------------------------
+    // 🔑 追加：足りないAPIキーを自動で要求して保存する機能
+    // --------------------------------------------------
+    const requiredKeys = [
+        { id: 'gemini_api_key', name: 'Gemini (AIの頭脳)' },
+        { id: 'finnhub_api_key', name: 'Finnhub (米国株データ)' },
+        { id: 'alphavantage_api_key', name: 'Alpha Vantage (日本株データ)' },
+        { id: 'tavily_api_key', name: 'Tavily (最新ニュース)' }
+    ];
+
+    for (const k of requiredKeys) {
+        if (!localStorage.getItem(k.id)) {
+            // おじいさまにも分かりやすいようにポップアップで要求
+            const userInput = prompt(`【初回設定】\n${k.name} の専用パスワード(APIキー)を入力してください。\n（一度入力すれば次回から要求されません）`);
+            if (userInput && userInput.trim() !== "") {
+                localStorage.setItem(k.id, userInput.trim());
+            } else {
+                alert(`⚠️ ${k.name} のパスワードがないため、分析をストップしました。`);
+                return; // キーがない場合はここで安全に停止
+            }
+        }
+    }
+    // --------------------------------------------------
+
     if (typeof ticker !== 'string') {
-        // もしHTML側から直接入力欄のIDを渡すのが難しい場合、自動で探すハック
         const inputEl = document.querySelector('input[type="text"]');
         if (inputEl) ticker = inputEl.value;
     }
@@ -24,11 +46,11 @@ async function startAnalysis(ticker) {
     
     ticker = ticker.trim().toUpperCase();
     
-    // UI: 自動ローディング画面の表示（エラー防止のため自動生成）
+    // UI: 自動ローディング画面の表示
     showLoadingIndicator();
 
     try {
-        // ① 15分キャッシュの確認 (API制限の防衛線)
+        // ① 15分キャッシュの確認
         const cacheKey = `cache_${ticker}`;
         const cachedData = localStorage.getItem(cacheKey);
         if (cachedData) {
@@ -36,7 +58,7 @@ async function startAnalysis(ticker) {
             if (Date.now() - parsedCache.timestamp < CACHE_TIME) {
                 console.log("15分以内のためキャッシュから推論します");
                 const result = await analyzeWithGemini(ticker, parsedCache.data);
-                displayFinalResult(result); // 画面に表示
+                displayFinalResult(result); 
                 return;
             }
         }
@@ -44,7 +66,7 @@ async function startAnalysis(ticker) {
         // ② 日米ハイブリッド・ルーティングと並列データ収集
         let stockData = "";
         let newsData = "";
-        const isJapaneseStock = /^\d{4}$/.test(ticker); // 4桁の数字なら日本株と判定
+        const isJapaneseStock = /^\d{4}$/.test(ticker); 
 
         if (isJapaneseStock) {
             console.log("日本株モードでデータ取得中...");
@@ -75,14 +97,13 @@ async function startAnalysis(ticker) {
         // ④ Gemini APIでの推論実行
         const finalResult = await analyzeWithGemini(ticker, combinedContext);
         
-        // ⑤ 画面への結果描画（省略なし）
+        // ⑤ 画面への結果描画
         displayFinalResult(finalResult);
 
     } catch (error) {
         console.error("エラー:", error);
         alert(`処理に失敗しました: ${error.message}\n時間をおいて再試行してください。`);
     } finally {
-        // UI: ローディング表示の終了
         hideLoadingIndicator();
     }
 }
@@ -92,11 +113,8 @@ async function startAnalysis(ticker) {
 // ==========================================
 async function fetchFinnhubData(ticker) {
     const key = localStorage.getItem('finnhub_api_key');
-    if (!key) throw new Error("FinnhubのAPIキーが設定されていません。ブラウザに保存してください。");
-    
     const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${key}`);
     if (!res.ok) throw new Error("株価データの取得に失敗しました");
-    
     const data = await res.json();
     if (data.c === 0 && data.d === null) return "銘柄データが見つかりませんでした。";
     return `現在値: $${data.c}, 前日比: $${data.d} (${data.dp}%)`;
@@ -104,11 +122,8 @@ async function fetchFinnhubData(ticker) {
 
 async function fetchAlphaVantageData(ticker) {
     const key = localStorage.getItem('alphavantage_api_key');
-    if (!key) throw new Error("Alpha VantageのAPIキーが設定されていません。");
-    
     const res = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}.TOK&apikey=${key}`);
     if (!res.ok) throw new Error("株価データの取得に失敗しました");
-    
     const data = await res.json();
     const quote = data["Global Quote"];
     if (!quote || Object.keys(quote).length === 0) return "詳細な株価データは取得できませんでした。";
@@ -117,8 +132,6 @@ async function fetchAlphaVantageData(ticker) {
 
 async function fetchTavilyNews(query) {
     const key = localStorage.getItem('tavily_api_key');
-    if (!key) throw new Error("TavilyのAPIキーが設定されていません。");
-    
     const res = await fetch('https://api.tavily.com/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,19 +144,16 @@ async function fetchTavilyNews(query) {
         })
     });
     if (!res.ok) throw new Error("ニュースデータの取得に失敗しました");
-    
     const data = await res.json();
     return data.answer || data.results.map(r => `- ${r.title}: ${r.content}`).join('\n');
 }
 
 // ==========================================
-// 3. Gemini API サーキットブレーカー（モデル自動切り替え）
+// 3. Gemini API サーキットブレーカー
 // ==========================================
 async function analyzeWithGemini(ticker, contextText) {
     const key = localStorage.getItem('gemini_api_key');
-    if (!key) throw new Error("GeminiのAPIキーが設定されていません。");
-
-    const MAX_LOOPS = 2; // 最大2周で諦める（無限ループ防止）
+    const MAX_LOOPS = 2; 
     for (let loop = 0; loop < MAX_LOOPS; loop++) {
         for (const model of GEMINI_MODELS) {
             console.log(`AI呼び出し中: ${model}`);
@@ -151,7 +161,6 @@ async function analyzeWithGemini(ticker, contextText) {
                 return await callGeminiEndpoint(model, key, contextText);
             } catch (error) {
                 console.warn(`モデル ${model} でエラー:`, error.message);
-                // 429(制限) か 503(過負荷) の場合のみ次のモデルへ
                 if (error.message.includes('429') || error.message.includes('503')) {
                     continue; 
                 } else {
@@ -164,11 +173,10 @@ async function analyzeWithGemini(ticker, contextText) {
 }
 
 // ==========================================
-// 4. Gemini APIへの推論リクエスト（ソースのJSON構造を完全再現）
+// 4. Gemini APIへの推論リクエスト
 // ==========================================
 async function callGeminiEndpoint(model, apiKey, contextText) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    
     const requestBody = {
         contents: [{
             role: "user",
@@ -176,40 +184,25 @@ async function callGeminiEndpoint(model, apiKey, contextText) {
                 text: `以下の最新データに基づき、指定のJSON形式で出力せよ。\n\n【収集データ】\n${contextText}\n\n1. ポートフォリオ全体の「相関性・偏りリスク」の診断\n2. 各個別銘柄の最新アクション判定（BUY/HOLD/SELL）と簡潔なアドバイス\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n{\n  "correlationRisk": "string (ポートフォリオ全体のリスク診断テキスト)",\n  "individualVerdicts": [\n    {\n      "ticker": "string",\n      "verdict": "BUY/HOLD/SELL",\n      "advice": "string"\n    }\n  ]\n}`
             }]
         }],
-        systemInstruction: { 
-            parts: [{ text: "プロのマネージャーとして出力。回答はJSONのみ。" }] 
-        },
-        generationConfig: { 
-            responseMimeType: "application/json" 
-        }
-        // 注意: googleSearch ツールは外部APIで代替したため安全に削除済みです
+        systemInstruction: { parts: [{ text: "プロのマネージャーとして出力。回答はJSONのみ。" }] },
+        generationConfig: { responseMimeType: "application/json" }
     };
-
     const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
     });
-
-    if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
     const data = await response.json();
-    const jsonString = data.candidates[0].content.parts[0].text;
-    
-    return JSON.parse(jsonString);
+    return JSON.parse(data.candidates[0].content.parts[0].text);
 }
 
 // ==========================================
-// 5. 自動UI生成機能（エラーを絶対に起こさないための画面描画）
+// 5. 自動UI生成機能
 // ==========================================
-
-// データの読み込み中を表示する
 function showLoadingIndicator() {
     let loader = document.getElementById('ai-loader-overlay');
     if (!loader) {
-        // もしHTMLにローディング画面がなければ、JavaScriptが自動で作ります
         loader = document.createElement('div');
         loader.id = 'ai-loader-overlay';
         loader.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; z-index: 9999; font-size: 1.5rem; font-weight: bold; color: #2c3e50;';
@@ -224,18 +217,14 @@ function hideLoadingIndicator() {
     if (loader) loader.style.display = 'none';
 }
 
-// 分析結果を画面に表示する
 function displayFinalResult(data) {
     let resultDiv = document.getElementById('ai-result-display');
     if (!resultDiv) {
-        // もしHTMLに結果表示エリアがなければ、JavaScriptが自動で作ります
         resultDiv = document.createElement('div');
         resultDiv.id = 'ai-result-display';
         resultDiv.style.cssText = 'max-width: 800px; margin: 30px auto; padding: 20px; font-family: sans-serif;';
         document.body.appendChild(resultDiv);
     }
-
-    // おじいさま向けに文字を大きく、色分けしたデザインで出力
     let html = `
         <div style="background: #e8f8f5; padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 6px solid #1abc9c;">
             <h3 style="margin-top: 0; font-size: 1.4rem; color: #2c3e50;">📊 全体の相関性・偏りリスク</h3>
@@ -243,11 +232,8 @@ function displayFinalResult(data) {
         </div>
         <h3 style="font-size: 1.4rem; border-bottom: 2px solid #bdc3c7; padding-bottom: 10px;">🏢 個別銘柄の診断</h3>
     `;
-
     data.individualVerdicts.forEach(v => {
-        // 判定によって色を変える
         const color = v.verdict === 'BUY' ? '#c0392b' : (v.verdict === 'SELL' ? '#2980b9' : '#f39c12');
-        
         html += `
         <div style="background: #ffffff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #ecf0f1;">
             <h4 style="margin: 0 0 15px 0; font-size: 1.5rem;">
@@ -257,6 +243,5 @@ function displayFinalResult(data) {
         </div>
         `;
     });
-
     resultDiv.innerHTML = html;
 }
