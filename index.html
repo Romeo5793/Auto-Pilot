@@ -65,18 +65,6 @@
         .fill-base { background: linear-gradient(90deg, #64748b, #94a3b8); }
         .fill-bear { background: linear-gradient(90deg, #ef4444, #f87171); }
 
-        .timeline-container { border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1rem; margin-left: 0.5rem; }
-        .timeline-item { position: relative; padding-bottom: 1rem; }
-        .timeline-item::before {
-            content: ''; position: absolute; left: -1.4rem; top: 0.25rem;
-            width: 10px; height: 10px; border-radius: 50%; background: #3b82f6;
-            box-shadow: 0 0 10px #3b82f6;
-        }
-        .timeline-item:last-child { padding-bottom: 0; }
-        .impact-HIGH { color: #f97316; font-weight: bold; }
-        .impact-MID { color: #eab308; }
-        .impact-LOW { color: #94a3b8; }
-
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-dark); }
@@ -104,19 +92,12 @@
         .heat-warm { background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(249,115,22,0.4)); border-color: rgba(249,115,22,0.5); }
         .heat-cold { background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.4)); border-color: rgba(59,130,246,0.5); }
 
-        .speaking-pulse { animation: speakPulse 1.5s infinite; }
-        @keyframes speakPulse { 0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); } 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); } }
-
         .modal-overlay { background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(10px); z-index: 50; }
         .scan-line-modal {
             width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #a855f7, transparent);
             position: absolute; top: 0; left: 0; animation: scan 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
         @keyframes scan { 0% { top: -10%; opacity: 0; } 50% { opacity: 1; } 100% { top: 110%; opacity: 0; } }
-
-        .rank-badge-1 { text-shadow: 0 0 20px rgba(250, 204, 21, 0.8); }
-        .rank-badge-2 { text-shadow: 0 0 20px rgba(203, 213, 225, 0.8); }
-        .rank-badge-3 { text-shadow: 0 0 20px rgba(217, 119, 6, 0.8); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col relative break-words">
@@ -220,29 +201,9 @@
                     今最も安全で利益が狙える「買い銘柄」を発掘します。
                 </p>
 
-                <div id="saved-scan-area" class="w-full max-w-5xl mx-auto hidden relative z-10 text-left mb-10">
-                    <h3 class="text-lg font-black text-purple-400 mb-3 flex items-center tracking-wide">
-                        <i data-lucide="refresh-cw" class="w-5 h-5 mr-2 shrink-0"></i> <span>前回の続きから始める <span class="whitespace-nowrap">（差分更新）</span></span>
-                    </h3>
-                    <div class="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/50 rounded-2xl p-5 md:p-6 shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(219,39,119,0.5)] transition-all relative overflow-hidden">
-                        <div class="absolute -right-10 -bottom-10 opacity-10"><i data-lucide="radar" class="w-64 h-64"></i></div>
-                        <div class="flex flex-col md:flex-row justify-between md:items-center gap-6 relative z-10">
-                            <div class="flex-grow min-w-0">
-                                <div class="text-sm text-purple-300 mb-2 font-bold flex items-center">
-                                    <i data-lucide="history" class="w-4 h-4 mr-1 shrink-0"></i> 前回更新: <span id="saved-scan-date" class="text-white en-font ml-1"></span>
-                                </div>
-                                <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 max-h-32 overflow-y-auto custom-scrollbar">
-                                    <div id="saved-scan-conditions" class="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap"></div>
-                                </div>
-                            </div>
-                            <div id="saved-scan-buttons-container" class="flex flex-col sm:flex-row gap-4 w-full md:w-auto shrink-0 justify-end"></div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="mb-8 w-full max-w-5xl mx-auto glass-panel p-6 border border-blue-500/30 text-left relative z-10">
                     <h3 class="text-sm font-bold text-blue-400 mb-4 flex items-center tracking-wide">
-                        <i data-lucide="sliders-horizontal" class="w-4 h-4 mr-2"></i> 新規スキャン条件 <span class="text-xs text-slate-500 ml-2 font-normal">※米国株スキャンの場合、市場セグメントと優待ジャンルは無視されます</span>
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4 mr-2"></i> 新規スキャン条件
                     </h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
@@ -299,9 +260,9 @@
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     <div class="lg:col-span-1 glass-panel p-6 flex flex-col items-center justify-center text-center">
                         <h3 class="text-xs text-slate-400 font-bold mb-4">現在の相場状況</h3>
-                        <div id="signal-color" class="w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_currentColor]"><i data-lucide="power" class="w-8 h-8 text-slate-900"></i></div>
-                        <div id="signal-text" class="text-2xl font-black text-white mb-2 tracking-wider">---</div>
-                        <p id="signal-reason" class="text-slate-400 text-xs line-clamp-3 mb-4"></p>
+                        <div id="signal-color" class="w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_currentColor]"><i data-lucide="activity" class="w-8 h-8 text-slate-900"></i></div>
+                        <div id="signal-text" class="text-xl font-black text-white mb-2 tracking-wider">---</div>
+                        <p id="signal-reason" class="text-slate-400 text-xs line-clamp-4 mb-4"></p>
                     </div>
                     <div class="lg:col-span-3 glass-panel p-6">
                         <h3 class="text-xs text-slate-400 mb-4 font-bold flex items-center"><i data-lucide="flame" class="w-4 h-4 mr-2 text-orange-400"></i> 資金流入ヒートマップ</h3>
@@ -363,9 +324,6 @@
                     <p class="text-sm text-slate-300 company-text mb-0.5 font-bold">企業名</p>
                 </div>
                 <p class="text-xs text-slate-400 mt-2 reason-text line-clamp-2">推奨理由</p>
-                <div class="text-xs text-amber-400 mt-2 mb-1 font-bold yutai-detail-text hidden bg-amber-900/20 border border-amber-500/30 p-2 rounded-lg inline-block">
-                    <span class="yutai-content">優待情報</span>
-                </div>
             </div>
             <div class="md:w-1/4 flex flex-col justify-center">
                 <button class="deep-scan-btn w-full px-6 py-3 bg-purple-600 text-white rounded-xl text-sm font-bold border border-purple-400/30"><i data-lucide="fingerprint" class="w-4 h-4 mr-2 inline"></i> 企業カルテ</button>
@@ -413,7 +371,7 @@
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-2">
                         <div class="xl:col-span-1 bg-slate-900/40 rounded-2xl p-4 border border-slate-700 flex flex-col items-center justify-center">
                             <h4 class="text-xs font-bold text-slate-400 mb-2">AI総合評価</h4>
-                            <div class="relative w-full aspect-square max-w-[220px]"><canvas id="radarChart"></canvas></div>
+                            <div class="relative w-full aspect-square max-w-[240px] h-[240px]"><canvas id="radarChart"></canvas></div>
                         </div>
                         <div class="xl:col-span-2 bg-gradient-to-r from-blue-900/20 to-pink-900/20 rounded-2xl p-6 border border-purple-500/50">
                             <div class="flex items-center justify-between mb-4"><h4 class="text-lg font-bold text-white">最終決断</h4><span id="modal-decision-badge" class="px-5 py-2 rounded-full font-black text-sm border">---</span></div>
@@ -575,14 +533,15 @@
 
                 document.getElementById('loading-text').textContent = "収集したニュースをAIが分析し、ランキングを生成しています...";
 
+                // --- 改良: marketPhaseに5段階評価を指定 ---
                 const jsonFormat = `{
-                    "marketSignal": { "status": "GREEN/YELLOW/RED", "reason": "string" },
+                    "marketSignal": { "phase": "STRONG_BUY/BUY/NEUTRAL/SELL/STRONG_SELL", "reason": "string" },
                     "sectorHeatmap": [{ "sectorName": "string", "heat": "HOT/WARM/COLD", "reason": "string" }],
-                    "ranking20": [{ "rank": 1, "ticker": "string", "companyName": "string", "sector": "string", "score": 90, "reason": "string", "yutaiDetail": "string" }]
+                    "ranking20": [{ "rank": 1, "ticker": "string", "companyName": "string", "sector": "string", "score": 90, "reason": "string" }]
                 }`;
 
                 const payload = {
-                    contents: [{ parts: [{ text: `以下の検索条件と外部APIから取得した最新ニュースに基づいて分析してください。\n\n【最新ニュース】\n${newsContext}\n\n【検索条件】\n${conditionText}\n\n【指示】\n1. 資金流入(HOT)と流出(COLD)のヒートマップを作成。\n2. 条件を満たす、今初心者が買うべき有望な【おすすめランキングTOP20銘柄】を作成。\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n${jsonFormat}` }] }],
+                    contents: [{ parts: [{ text: `以下の検索条件と外部APIから取得した最新ニュースに基づいて分析してください。\n\n【最新ニュース】\n${newsContext}\n\n【検索条件】\n${conditionText}\n\n【指示】\n1. 資金流入(HOT)と流出(COLD)のヒートマップを作成。\n2. 今の市場環境をSTRONG_BUY(爆買い期)、BUY(買い推奨期)、NEUTRAL(中立・様子見)、SELL(売り警戒期)、STRONG_SELL(即退避期)の5段階で判定せよ。\n3. 条件を満たす、有望な【おすすめランキングTOP20銘柄】を作成。\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n${jsonFormat}` }] }],
                     systemInstruction: { parts: [{ text: "プロのアナリスト。回答はJSONのみ。" }] },
                     generationConfig: { responseMimeType: "application/json" }
                 };
@@ -599,24 +558,39 @@
             }
         }
 
-        // --- 修復: ヒートマップやシグナルを画面に描画する処理を追加 ---
+        // --- 改良: 5段階表示の日本語マッピングと色の変更 ---
         function renderDiscoverResults(data) {
-            // 1. シグナルの反映
             if (data.marketSignal) {
                 const signalColor = document.getElementById('signal-color');
                 const signalText = document.getElementById('signal-text');
                 const signalReason = document.getElementById('signal-reason');
                 
-                signalText.textContent = data.marketSignal.status;
                 signalReason.textContent = data.marketSignal.reason;
-                
                 signalColor.className = 'w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_currentColor]';
-                if (data.marketSignal.status === 'GREEN') signalColor.classList.add('text-green-400', 'bg-green-900/30');
-                else if (data.marketSignal.status === 'YELLOW') signalColor.classList.add('text-yellow-400', 'bg-yellow-900/30');
-                else if (data.marketSignal.status === 'RED') signalColor.classList.add('text-red-400', 'bg-red-900/30');
+                
+                const phase = data.marketSignal.phase || data.marketSignal.status;
+                
+                if (phase === 'STRONG_BUY') {
+                    signalText.textContent = "爆買い推奨期";
+                    signalColor.classList.add('text-emerald-400', 'bg-emerald-900/30');
+                } else if (phase === 'BUY') {
+                    signalText.textContent = "買い推奨期";
+                    signalColor.classList.add('text-green-400', 'bg-green-900/30');
+                } else if (phase === 'NEUTRAL') {
+                    signalText.textContent = "中立・様子見";
+                    signalColor.classList.add('text-slate-400', 'bg-slate-800/50');
+                } else if (phase === 'SELL') {
+                    signalText.textContent = "売り警戒期";
+                    signalColor.classList.add('text-orange-400', 'bg-orange-900/30');
+                } else if (phase === 'STRONG_SELL') {
+                    signalText.textContent = "即退避・売り期";
+                    signalColor.classList.add('text-red-400', 'bg-red-900/30');
+                } else {
+                    signalText.textContent = phase;
+                    signalColor.classList.add('text-purple-400', 'bg-purple-900/30');
+                }
             }
 
-            // 2. ヒートマップの反映
             if (data.sectorHeatmap && data.sectorHeatmap.length > 0) {
                 const heatmapContainer = document.getElementById('heatmap-container');
                 heatmapContainer.innerHTML = '';
@@ -633,7 +607,6 @@
                 });
             }
 
-            // 3. リストの反映
             const listContainer = document.getElementById('portfolio-list');
             listContainer.innerHTML = '';
             if (data.ranking20) {
@@ -773,7 +746,7 @@
 
                 const payload = {
                     contents: [{ parts: [{ text: `外部APIから取得した以下の最新データを用いて「${ticker}」を分析してください。\n\n【株価データ】\n${stockData}\n\n【最新ニュース】\n${newsData}\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n${JSON.stringify(jsonFormatObj, null, 2)}` }] }],
-                    systemInstruction: { parts: [{ text: "最高峰のアナリストAI。回答はJSONのみ。" }] },
+                    systemInstruction: { parts: [{ text: "最高峰のアナリストAI。回答はJSONのみ。radarScores内の各数値は必ず0から100の間の整数（例: 80）で出力してください。" }] },
                     generationConfig: { responseMimeType: "application/json" }
                 };
                 
@@ -787,7 +760,7 @@
                 document.getElementById('modal-decision-badge').textContent = rawData.finalVerdict.decision;
                 document.getElementById('modal-final-conclusion').textContent = rawData.finalVerdict.conclusion;
                 
-                // --- 修復: グラフの設定（凡例非表示・数値非表示）を追加 ---
+                // --- 修復: グラフ線・グリッド線の色調整と確実なスケール固定設定 ---
                 if(rawData.radarScores) {
                     const ctx = document.getElementById('radarChart').getContext('2d');
                     
@@ -795,16 +768,24 @@
                         currentRadarChart.destroy();
                     }
                     
+                    const scores = [
+                        rawData.radarScores.growth || rawData.radarScores.growth === 0 ? rawData.radarScores.growth : 50,
+                        rawData.radarScores.value || rawData.radarScores.value === 0 ? rawData.radarScores.value : 50,
+                        rawData.radarScores.momentum || rawData.radarScores.momentum === 0 ? rawData.radarScores.momentum : 50,
+                        rawData.radarScores.safety || rawData.radarScores.safety === 0 ? rawData.radarScores.safety : 50,
+                        rawData.radarScores.macroTailwind || rawData.radarScores.macroTailwind === 0 ? rawData.radarScores.macroTailwind : 50
+                    ];
+                    
                     currentRadarChart = new Chart(ctx, { 
                         type: 'radar', 
                         data: { 
                             labels: ['成長', '割安', '勢い', '安全', 'マクロ'], 
                             datasets: [{ 
-                                label: 'AI評価スコア', 
-                                data: [rawData.radarScores.growth, rawData.radarScores.value, rawData.radarScores.momentum, rawData.radarScores.safety, rawData.radarScores.macroTailwind], 
+                                data: scores, 
                                 borderColor: '#a855f7',
                                 backgroundColor: 'rgba(168, 85, 247, 0.2)',
-                                pointBackgroundColor: '#a855f7'
+                                pointBackgroundColor: '#c084fc',
+                                borderWidth: 2
                             }] 
                         },
                         options: {
@@ -815,10 +796,24 @@
                             },
                             scales: {
                                 r: { 
-                                    min: 0, 
-                                    max: 100, 
-                                    ticks: { display: false },
-                                    pointLabels: { color: '#cbd5e1', font: { size: 11 } }
+                                    min: 0,
+                                    max: 100,
+                                    suggestedMin: 0,
+                                    suggestedMax: 100,
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.15)' 
+                                    },
+                                    angleLines: {
+                                        color: 'rgba(255, 255, 255, 0.15)'
+                                    },
+                                    ticks: { 
+                                        display: false,
+                                        stepSize: 20
+                                    },
+                                    pointLabels: { 
+                                        color: '#94a3b8', 
+                                        font: { size: 12, weight: 'bold' } 
+                                    }
                                 }
                             }
                         }
