@@ -88,6 +88,11 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 2px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.4); border-radius: 2px; }
 
+        /* --- 追加分 --- */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .break-words { word-wrap: break-word; overflow-wrap: break-word; }
+
         .main-tab {
             padding: 0.75rem 1.5rem; border-bottom: 2px solid transparent; color: #64748b; font-weight: bold;
             transition: all 0.3s; cursor: pointer; display: flex; align-items: center;
@@ -116,7 +121,7 @@
         .rank-badge-3 { text-shadow: 0 0 20px rgba(217, 119, 6, 0.8); }
     </style>
 </head>
-<body class="min-h-screen flex flex-col relative">
+<body class="min-h-screen flex flex-col relative break-words">
 
     <div id="auth-overlay" class="fixed inset-0 bg-[#020617] z-[100] hidden items-center justify-center p-4 backdrop-blur-xl overflow-y-auto">
         <div class="glass-panel p-6 md:p-8 max-w-md w-full text-center relative shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-slate-700 my-auto">
@@ -532,7 +537,6 @@
         const GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
         
         async function callGeminiAPI(payload) {
-            // tools: [{ googleSearch: {} }] をペイロードから強制削除（エラー防止）
             if (payload.tools) delete payload.tools;
 
             const MAX_LOOPS = 2;
@@ -549,8 +553,8 @@
                         const data = await response.json();
                         return data;
                     } catch (e) {
-                        if (e.message === "RETRY") continue; // 制限時は次のモデルへ
-                        throw e; // それ以外の致命的エラーは停止
+                        if (e.message === "RETRY") continue; 
+                        throw e; 
                     }
                 }
             }
@@ -579,7 +583,6 @@
             loadingPanel.classList.remove('hidden'); loadingPanel.classList.add('flex');
             
             try {
-                // 【重要】Geminiに検索させるのではなく、Tavily APIでニュースを集めてからGeminiに渡す
                 const newsQuery = isUsStock ? `${timeframe} US stocks to buy market news` : `${segment} おすすめ株 ${timeframe} 最新ニュース`;
                 document.getElementById('loading-text').textContent = "外部APIから最新の市場ニュースを収集しています...";
                 const newsContext = await fetchTavilyNews(newsQuery);
@@ -686,7 +689,6 @@
             try {
                 document.getElementById('loading-text').innerHTML = `全${assets.length}銘柄の最新データを外部APIから並列取得中...`;
                 
-                // 1. 各銘柄の株価を並列フェッチ
                 const promises = assets.map(async a => {
                     const isUS = /^[A-Z]+$/.test(a.ticker);
                     const stockData = isUS ? await fetchFinnhubData(a.ticker) : await fetchAlphaVantageData(a.ticker);
@@ -694,7 +696,6 @@
                 });
                 const combinedStockData = (await Promise.all(promises)).join('\n');
                 
-                // 2. 市場全体のニュースをTavilyでフェッチ
                 const generalNews = await fetchTavilyNews("stock market latest news today");
 
                 document.getElementById('loading-text').innerHTML = `取得したデータをもとにGemini AIが一括診断中...`;
@@ -732,6 +733,8 @@
         // ==========================================
         // メイン機能3: 個別銘柄の企業カルテ (ディープスキャン)
         // ==========================================
+        let currentRadarChart = null; // チャート保持用
+
         async function openDeepScanModal(ticker, companyName) {
             document.getElementById('modal-title').textContent = ticker;
             document.getElementById('deep-scan-modal').classList.remove('hidden');
@@ -772,7 +775,29 @@
                 
                 if(rawData.radarScores) {
                     const ctx = document.getElementById('radarChart').getContext('2d');
-                    new Chart(ctx, { type: 'radar', data: { labels: ['成長', '割安', '勢い', '安全', 'マクロ'], datasets: [{ data: [rawData.radarScores.growth, rawData.radarScores.value, rawData.radarScores.momentum, rawData.radarScores.safety, rawData.radarScores.macroTailwind], borderColor: '#a855f7' }] }});
+                    
+                    if (currentRadarChart) {
+                        currentRadarChart.destroy();
+                    }
+                    
+                    currentRadarChart = new Chart(ctx, { 
+                        type: 'radar', 
+                        data: { 
+                            labels: ['成長', '割安', '勢い', '安全', 'マクロ'], 
+                            datasets: [{ 
+                                data: [rawData.radarScores.growth, rawData.radarScores.value, rawData.radarScores.momentum, rawData.radarScores.safety, rawData.radarScores.macroTailwind], 
+                                borderColor: '#a855f7',
+                                backgroundColor: 'rgba(168, 85, 247, 0.2)'
+                            }] 
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                r: { min: 0, max: 100, ticks: { display: false } }
+                            }
+                        }
+                    });
                 }
 
                 document.getElementById('modal-loading').classList.add('hidden');
