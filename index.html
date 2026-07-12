@@ -124,30 +124,45 @@
             <div class="bg-slate-900/80 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border border-slate-700/50">
                 <i data-lucide="key" class="w-8 h-8 text-purple-400"></i>
             </div>
-            <h2 class="text-2xl font-black text-white mb-2 tracking-tight">システム・ロック解除</h2>
-            <p class="text-xs text-slate-400 mb-6 leading-relaxed">Google検索の代わりに外部データを使うため、<br>4つのAPIキーを入力してください。</p>
+            <h2 class="text-2xl font-black text-white mb-2 tracking-tight">初期設定（パスワード登録）</h2>
+            <p class="text-xs text-slate-400 mb-6 leading-relaxed">AIが世界中のデータを集めて分析するために、<br>4つの無料専用パスワード(APIキー)が必要です。</p>
             
-            <div class="text-left space-y-3 mb-6 max-h-[40vh] overflow-y-auto custom-scrollbar pr-2">
-                <div>
-                    <label class="text-xs font-bold text-blue-400">1. Gemini API (推論用)</label>
-                    <input type="password" id="api-key-gemini" placeholder="AIza..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 font-mono text-sm mt-1">
+            <div class="text-left space-y-4 mb-6 max-h-[45vh] overflow-y-auto custom-scrollbar pr-2">
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-xs font-bold text-blue-400">1. AIの頭脳 (Gemini API)</label>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-[10px] bg-blue-900/50 text-blue-200 px-2 py-1 rounded border border-blue-500/30 hover:bg-blue-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
+                    </div>
+                    <input type="password" id="api-key-gemini" placeholder="AIza... から始まる文字" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 font-mono text-sm">
                 </div>
-                <div>
-                    <label class="text-xs font-bold text-green-400">2. Finnhub API (米国株データ)</label>
-                    <input type="password" id="api-key-finnhub" placeholder="c..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500 font-mono text-sm mt-1">
+
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-xs font-bold text-green-400">2. 米国株データ (Finnhub)</label>
+                        <a href="https://finnhub.io/register" target="_blank" rel="noopener noreferrer" class="text-[10px] bg-green-900/50 text-green-200 px-2 py-1 rounded border border-green-500/30 hover:bg-green-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
+                    </div>
+                    <input type="password" id="api-key-finnhub" placeholder="c... から始まる文字" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500 font-mono text-sm">
                 </div>
-                <div>
-                    <label class="text-xs font-bold text-amber-400">3. Alpha Vantage (日本株データ)</label>
-                    <input type="password" id="api-key-alpha" placeholder="..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 font-mono text-sm mt-1">
+
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-xs font-bold text-amber-400">3. 日本株データ (Alpha Vantage)</label>
+                        <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="text-[10px] bg-amber-900/50 text-amber-200 px-2 py-1 rounded border border-amber-500/30 hover:bg-amber-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
+                    </div>
+                    <input type="password" id="api-key-alpha" placeholder="アルファベットと数字の羅列" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 font-mono text-sm">
                 </div>
-                <div>
-                    <label class="text-xs font-bold text-purple-400">4. Tavily API (最新ニュース検索)</label>
-                    <input type="password" id="api-key-tavily" placeholder="tvly-..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-500 font-mono text-sm mt-1">
+
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-xs font-bold text-purple-400">4. 最新ニュース (Tavily API)</label>
+                        <a href="https://app.tavily.com/sign-in" target="_blank" rel="noopener noreferrer" class="text-[10px] bg-purple-900/50 text-purple-200 px-2 py-1 rounded border border-purple-500/30 hover:bg-purple-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
+                    </div>
+                    <input type="password" id="api-key-tavily" placeholder="tvly-... から始まる文字" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-500 font-mono text-sm">
                 </div>
             </div>
 
             <button onclick="saveApiKeys()" class="btn-zenith text-white font-bold py-3 px-6 rounded-xl w-full flex items-center justify-center text-lg tracking-wider">
-                <i data-lucide="unlock" class="w-5 h-5 mr-2"></i> ロックを解除する
+                <i data-lucide="save" class="w-5 h-5 mr-2"></i> パスワードを保存して開始
             </button>
         </div>
     </div>
