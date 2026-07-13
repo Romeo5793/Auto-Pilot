@@ -155,6 +155,13 @@
   async function startAnalysis(ticker) {
     if (!(await ensureKeysInteractive())) return;
 
+    try {
+      C.assertOnline();
+    } catch (error) {
+      C.showToast(C.friendlyErrorMessage(error), "error");
+      return;
+    }
+
     if (typeof ticker !== "string") {
       const inputEl = document.querySelector('input[type="text"]');
       if (inputEl) ticker = inputEl.value;
@@ -199,7 +206,7 @@
       C.showToast("分析が完了しました。", "success");
     } catch (error) {
       console.error(error);
-      if (!(error && error.name === "AbortError")) {
+      if (!(error && C.isAbortError(error))) {
         C.showToast(C.friendlyErrorMessage(error), "error");
       }
     } finally {

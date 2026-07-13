@@ -25,6 +25,24 @@
     return apiKeys;
   }
 
+  function guardBeforeNetwork() {
+    refreshApiKeys();
+    C.assertOnline();
+    return C.requireCompleteApiKeys(apiKeys);
+  }
+
+  function handleCaughtError(error, fallbackUi) {
+    if (C.isAbortError(error)) return;
+    C.showToast(C.friendlyErrorMessage(error), "error");
+    if (typeof fallbackUi === "function") {
+      try {
+        fallbackUi();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+  }
+
   function abortJob(name) {
     if (activeJobs[name]) {
       activeJobs[name].abort();
@@ -73,9 +91,14 @@
 
     if (gemini && finnhub && alpha && tavily) {
       C.setGeminiApiKey(gemini);
-      C.setStorage(C.STORAGE_KEYS.finnhub, finnhub);
-      C.setStorage(C.STORAGE_KEYS.alpha, alpha);
-      C.setStorage(C.STORAGE_KEYS.tavily, tavily);
+      const ok =
+        C.setStorage(C.STORAGE_KEYS.finnhub, finnhub) &&
+        C.setStorage(C.STORAGE_KEYS.alpha, alpha) &&
+        C.setStorage(C.STORAGE_KEYS.tavily, tavily);
+      if (!ok) {
+        C.showToast("APIキーの保存に失敗しました。端末の保存容量をご確認ください。", "error");
+        return;
+      }
       refreshApiKeys();
       C.showToast("APIキーを保存しました。", "success");
       checkAuth();
@@ -143,13 +166,23 @@
   async function startAutoPilotMultiStep(isUpdate, isYutaiOnly, isUsStock) {
     isYutaiOnly = !!isYutaiOnly;
     isUsStock = !!isUsStock;
-    refreshApiKeys();
+
+    try {
+      apiKeys = guardBeforeNetwork();
+    } catch (error) {
+      handleCaughtError(error, function () {
+        checkAuth();
+      });
+      return;
+    }
 
     const job = beginJob("discover");
     const conditions = buildDiscoverConditions(isYutaiOnly, isUsStock);
 
-    document.getElementById("intro-panel").style.display = "none";
-    document.getElementById("discover-results").classList.add("hidden");
+    const intro = document.getElementById("intro-panel");
+    const discoverResults = document.getElementById("discover-results");
+    if (intro) intro.style.display = "none";
+    if (discoverResults) discoverResults.classList.add("hidden");
     setLoading(true, "外部APIから最新の市場ニュースを収集しています...");
 
     try {
@@ -189,13 +222,13 @@
       };
 
       const result = await C.callGeminiAPI(payload, { apiKey: apiKeys.gemini, signal: job.signal });
-      const finalData = C.parseStructuredResponse(result);
+      const finalData = C.assertDiscoverPayload(C.parseStructuredResponse(result));
       renderDiscoverResults(finalData);
       C.showToast("おすすめランキングの作成が完了しました。", "success");
     } catch (error) {
-      if (error && error.name === "AbortError") return;
-      C.showToast(C.friendlyErrorMessage(error), "error");
-      document.getElementById("intro-panel").style.display = "block";
+      handleCaughtError(error, function () {
+        if (intro) intro.style.display = "block";
+      });
     } finally {
       endJob("discover", job);
       setLoading(false);
@@ -215,25 +248,32 @@
           "w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_currentColor]";
       }
       const phase = data.marketSignal.phase || data.marketSignal.status || "";
-      if (phase === "STRONG_BUY") {
-        signalText.textContent = "爆買い推奨期";
-        signalColor.classList.add("text-emerald-400", "bg-emerald-900/30");
-      } else if (phase === "BUY") {
-        signalText.textContent = "買い推奨期";
-        signalColor.classList.add("text-green-400", "bg-green-900/30");
-      } else if (phase === "NEUTRAL") {
-        signalText.textContent = "中立・様子見";
-        signalColor.classList.add("text-slate-200", "bg-slate-800/50");
-      } else if (phase === "SELL") {
-        signalText.textContent = "売り警戒期";
-        signalColor.classList.add("text-orange-400", "bg-orange-900/30");
-      } else if (phase === "STRONG_SELL") {
-        signalText.textContent = "即退避・売り期";
-        signalColor.classList.add("text-red-400", "bg-red-900/30");
-      } else {
-        signalText.textContent = phase || "---";
-        signalColor.classList.add("text-purple-400", "bg-purple-900/30");
-      }
+      const label =
+        phase === "STRONG_BUY"
+          ? "爆買い推奨期"
+          : phase === "BUY"
+            ? "買い推奨期"
+            : phase === "NEUTRAL"
+              ? "中立・様子見"
+              : phase === "SELL"
+                ? "売り警戒期"
+                : phase === "STRONG_SELL"
+                  ? "即退避・売り期"
+                  : phase || "---";
+      const colorClass =
+        phase === "STRONG_BUY"
+          ? ["text-emerald-400", "bg-emerald-900/30"]
+          : phase === "BUY"
+            ? ["text-green-400", "bg-green-900/30"]
+            : phase === "NEUTRAL"
+              ? ["text-slate-200", "bg-slate-800/50"]
+              : phase === "SELL"
+                ? ["text-orange-400", "bg-orange-900/30"]
+                : phase === "STRONG_SELL"
+                  ? ["text-red-400", "bg-red-900/30"]
+                  : ["text-purple-400", "bg-purple-900/30"];
+      if (signalText) signalText.textContent = label;
+      if (signalColor) signalColor.classList.add(colorClass[0], colorClass[1]);
     }
 
     const heatmapContainer = document.getElementById("heatmap-container");
@@ -266,21 +306,31 @@
       listContainer.innerHTML = "";
       const ranking = Array.isArray(data.ranking20) ? data.ranking20 : [];
       const template = document.getElementById("ranking-card-template");
+      if (!template) {
+        C.showToast("画面テンプレートの読み込みに失敗しました。", "error");
+        return;
+      }
       ranking.forEach((item) => {
         const clone = template.content.cloneNode(true);
-        clone.querySelector(".ticker-text").textContent = item.ticker || "";
-        clone.querySelector(".company-text").textContent = item.companyName || "";
-        clone.querySelector(".reason-text").textContent = item.reason || "";
+        const tickerEl = clone.querySelector(".ticker-text");
+        const companyEl = clone.querySelector(".company-text");
+        const reasonEl = clone.querySelector(".reason-text");
+        if (tickerEl) tickerEl.textContent = item.ticker || "";
+        if (companyEl) companyEl.textContent = item.companyName || "";
+        if (reasonEl) reasonEl.textContent = item.reason || "";
         const deepBtn = clone.querySelector(".deep-scan-btn");
-        deepBtn.addEventListener("click", () =>
-          openDeepScanModal(item.ticker, item.companyName)
-        );
+        if (deepBtn) {
+          deepBtn.addEventListener("click", () =>
+            openDeepScanModal(item.ticker, item.companyName)
+          );
+        }
         listContainer.appendChild(clone);
       });
       C.createIconsIn(listContainer);
     }
 
     const results = document.getElementById("discover-results");
+    if (!results) return;
     results.classList.remove("hidden");
     results.classList.add("flex");
     setTimeout(() => {
@@ -332,7 +382,13 @@
   }
 
   async function scanMyPortfolio() {
-    refreshApiKeys();
+    try {
+      apiKeys = guardBeforeNetwork();
+    } catch (error) {
+      handleCaughtError(error, checkAuth);
+      return;
+    }
+
     const assets = C.getMyAssets();
     if (assets.length === 0) {
       C.showToast("保有銘柄を追加してください。", "info");
@@ -343,13 +399,36 @@
     setLoading(true, "全" + assets.length + "銘柄の最新データを取得中...");
 
     try {
-      const lines = await C.mapPool(assets, C.FETCH_CONCURRENCY, async (a) => {
+      const settled = await C.mapPoolSettled(assets, C.FETCH_CONCURRENCY, async (a) => {
         const stockData = C.isUsTicker(a.ticker)
           ? await C.fetchFinnhubData(a.ticker, apiKeys, job.signal)
           : await C.fetchAlphaVantageData(a.ticker, apiKeys, job.signal);
         return "【" + a.ticker + "】 株価: " + stockData;
       });
-      const combinedStockData = lines.join("\n");
+
+      const okLines = [];
+      const failedTickers = [];
+      settled.forEach((row) => {
+        if (row.status === "fulfilled") okLines.push(row.value);
+        else failedTickers.push((row.item && row.item.ticker) || "?");
+      });
+
+      if (okLines.length === 0) {
+        throw new Error(
+          "全銘柄のデータ取得に失敗しました。" +
+            (failedTickers.length ? "（" + failedTickers.join(", ") + "）" : "")
+        );
+      }
+
+      if (failedTickers.length) {
+        C.showToast(
+          "一部銘柄の取得に失敗しました: " + failedTickers.join(", ") + "。取得できた銘柄で診断を続けます。",
+          "info",
+          7000
+        );
+      }
+
+      const combinedStockData = okLines.join("\n");
       const generalNews = await C.fetchTavilyNews(
         "stock market latest news today",
         apiKeys,
@@ -387,8 +466,8 @@
       };
 
       const result = await C.callGeminiAPI(payload, { apiKey: apiKeys.gemini, signal: job.signal });
-      const aiData = C.parseStructuredResponse(result);
-      const verdicts = Array.isArray(aiData.individualVerdicts) ? aiData.individualVerdicts : [];
+      const aiData = C.assertPortfolioPayload(C.parseStructuredResponse(result));
+      const verdicts = aiData.individualVerdicts;
 
       const commentary = document.getElementById("my-market-commentary");
       const commentaryText = document.getElementById("my-commentary-text");
@@ -405,12 +484,13 @@
           advice: vData.advice,
         });
       });
-      C.saveMyAssets(nextAssets);
+      if (!C.saveMyAssets(nextAssets)) {
+        C.showToast("診断結果の保存に失敗しました。端末の保存容量をご確認ください。", "error");
+      }
       renderMyPortfolio();
       C.showToast("ポートフォリオの診断が完了しました。", "success");
     } catch (error) {
-      if (error && error.name === "AbortError") return;
-      C.showToast(C.friendlyErrorMessage(error), "error");
+      handleCaughtError(error);
     } finally {
       endJob("portfolio", job);
       setLoading(false);
@@ -438,20 +518,40 @@
   }
 
   async function openDeepScanModal(ticker, companyName) {
-    refreshApiKeys();
+    if (!ticker) {
+      C.showToast("銘柄コードがありません。", "error");
+      return;
+    }
+
+    try {
+      apiKeys = guardBeforeNetwork();
+    } catch (error) {
+      handleCaughtError(error, checkAuth);
+      return;
+    }
+
     const job = beginJob("deepScan");
     destroyRadarChart();
 
-    document.getElementById("modal-title").textContent = ticker;
-    document.getElementById("modal-subtitle").textContent = companyName || "企業データ";
+    const titleEl = document.getElementById("modal-title");
+    const subtitleEl = document.getElementById("modal-subtitle");
     const modal = document.getElementById("deep-scan-modal");
+    const loadingEl = document.getElementById("modal-loading");
+    const contentEl = document.getElementById("modal-content-data");
+    const loadingSub = document.getElementById("modal-loading-subtext");
+    if (!modal || !loadingEl || !contentEl) {
+      C.showToast("カルテ画面の表示に失敗しました。", "error");
+      return;
+    }
+
+    if (titleEl) titleEl.textContent = ticker;
+    if (subtitleEl) subtitleEl.textContent = companyName || "企業データ";
     modal.classList.remove("hidden");
     setTimeout(() => modal.classList.add("opacity-100"), 10);
 
-    document.getElementById("modal-loading").classList.remove("hidden");
-    document.getElementById("modal-content-data").classList.add("hidden");
-    document.getElementById("modal-loading-subtext").textContent =
-      "外部APIから最新の株価とニュースを取得中...";
+    loadingEl.classList.remove("hidden");
+    contentEl.classList.add("hidden");
+    if (loadingSub) loadingSub.textContent = "外部APIから最新の株価とニュースを取得中...";
 
     try {
       const stockData = C.isUsTicker(ticker)
@@ -460,8 +560,9 @@
       const newsData = await C.fetchTavilyNews(ticker + " stock news", apiKeys, job.signal);
 
       if (job.signal.aborted) return;
-      document.getElementById("modal-loading-subtext").textContent =
-        "取得したデータをもとにAIが詳細なカルテを作成中...";
+      if (loadingSub) {
+        loadingSub.textContent = "取得したデータをもとにAIが詳細なカルテを作成中...";
+      }
 
       const payload = {
         contents: [
@@ -469,9 +570,9 @@
             parts: [
               {
                 text:
-                  '外部APIから取得した以下の最新データを用いて「' +
+                  "外部APIから取得した以下の最新データを用いて「" +
                   ticker +
-                  '」を分析してください。\n\n【株価データ】\n' +
+                  "」を分析してください。\n\n【株価データ】\n" +
                   stockData +
                   "\n\n【最新ニュース】\n" +
                   newsData +
@@ -495,80 +596,94 @@
 
       const result = await C.callGeminiAPI(payload, { apiKey: apiKeys.gemini, signal: job.signal });
       if (job.signal.aborted) return;
-      const rawData = C.parseStructuredResponse(result);
+      const rawData = C.assertDeepScanPayload(C.parseStructuredResponse(result));
       const finalVerdict = rawData.finalVerdict || {};
       const radar = rawData.radarScores || {};
 
-      document.getElementById("modal-genius-view").textContent = rawData.geniusView || "";
-      document.getElementById("modal-veteran-view").textContent = rawData.veteranView || "";
-      document.getElementById("modal-macro-view").textContent = rawData.macroView || "";
-      document.getElementById("modal-quant-view").textContent = rawData.quantView || "";
-      C.applyVerdictStyle(
-        document.getElementById("modal-decision-badge"),
-        finalVerdict.decision
-      );
-      document.getElementById("modal-final-conclusion").textContent =
-        finalVerdict.conclusion || "";
+      const setText = function (id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value || "";
+      };
+      setText("modal-genius-view", rawData.geniusView);
+      setText("modal-veteran-view", rawData.veteranView);
+      setText("modal-macro-view", rawData.macroView);
+      setText("modal-quant-view", rawData.quantView);
+      C.applyVerdictStyle(document.getElementById("modal-decision-badge"), finalVerdict.decision);
+      setText("modal-final-conclusion", finalVerdict.conclusion);
 
-      const ctx = document.getElementById("radarChart").getContext("2d");
-      const scores = [
-        C.scoreOrDefault(radar.growth),
-        C.scoreOrDefault(radar.value),
-        C.scoreOrDefault(radar.momentum),
-        C.scoreOrDefault(radar.safety),
-        C.scoreOrDefault(radar.macroTailwind),
-      ];
-
-      currentRadarChart = new Chart(ctx, {
-        type: "radar",
-        data: {
-          labels: ["成長", "割安", "勢い", "安全", "マクロ"],
-          datasets: [
-            {
-              data: scores,
-              borderColor: "#a855f7",
-              backgroundColor: "rgba(168, 85, 247, 0.2)",
-              pointBackgroundColor: "#c084fc",
-              borderWidth: 2,
+      const canvas = document.getElementById("radarChart");
+      if (canvas && typeof Chart !== "undefined") {
+        const ctx = canvas.getContext("2d");
+        const scores = [
+          C.scoreOrDefault(radar.growth),
+          C.scoreOrDefault(radar.value),
+          C.scoreOrDefault(radar.momentum),
+          C.scoreOrDefault(radar.safety),
+          C.scoreOrDefault(radar.macroTailwind),
+        ];
+        try {
+          currentRadarChart = new Chart(ctx, {
+            type: "radar",
+            data: {
+              labels: ["成長", "割安", "勢い", "安全", "マクロ"],
+              datasets: [
+                {
+                  data: scores,
+                  borderColor: "#a855f7",
+                  backgroundColor: "rgba(168, 85, 247, 0.2)",
+                  pointBackgroundColor: "#c084fc",
+                  borderWidth: 2,
+                },
+              ],
             },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            r: {
-              min: 0,
-              max: 100,
-              suggestedMin: 0,
-              suggestedMax: 100,
-              grid: { color: "rgba(255, 255, 255, 0.15)" },
-              angleLines: { color: "rgba(255, 255, 255, 0.15)" },
-              ticks: { display: false, stepSize: 20 },
-              pointLabels: {
-                color: "#94a3b8",
-                font: { size: 12, weight: "bold" },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                r: {
+                  min: 0,
+                  max: 100,
+                  suggestedMin: 0,
+                  suggestedMax: 100,
+                  grid: { color: "rgba(255, 255, 255, 0.15)" },
+                  angleLines: { color: "rgba(255, 255, 255, 0.15)" },
+                  ticks: { display: false, stepSize: 20 },
+                  pointLabels: {
+                    color: "#94a3b8",
+                    font: { size: 12, weight: "bold" },
+                  },
+                },
               },
             },
-          },
-        },
-      });
+          });
+        } catch (chartError) {
+          console.error(chartError);
+          C.showToast("レーダーチャートの表示に失敗しましたが、文章の診断は表示できます。", "info");
+        }
+      }
 
-      document.getElementById("modal-loading").classList.add("hidden");
-      document.getElementById("modal-content-data").classList.remove("hidden");
-      document.getElementById("modal-content-data").classList.add("flex");
+      loadingEl.classList.add("hidden");
+      contentEl.classList.remove("hidden");
+      contentEl.classList.add("flex");
     } catch (error) {
-      if (error && error.name === "AbortError") return;
-      C.showToast(C.friendlyErrorMessage(error), "error");
-      document.getElementById("modal-loading").classList.add("hidden");
+      handleCaughtError(error);
+      loadingEl.classList.add("hidden");
     } finally {
       endJob("deepScan", job);
     }
   }
 
   async function explainPriceMovement(ticker, btnElement, resultElement) {
-    refreshApiKeys();
+    if (!btnElement || !resultElement) return;
+
+    try {
+      apiKeys = guardBeforeNetwork();
+    } catch (error) {
+      handleCaughtError(error, checkAuth);
+      return;
+    }
+
     const job = beginJob("whyMoved");
     const originalLabel = "なぜ動いた？（最新ニュース）";
     btnElement.textContent = "最新ニュースを検索中...";
@@ -588,9 +703,9 @@
             parts: [
               {
                 text:
-                  '以下の最新ニュースを基に、「' +
+                  "以下の最新ニュースを基に、「" +
                   ticker +
-                  '」の今日の株価がなぜ動いているのかを初心者に向けて1〜2文で教えてください。\n\n【最新ニュース】\n' +
+                  "」の今日の株価がなぜ動いているのかを初心者に向けて1〜2文で教えてください。\n\n【最新ニュース】\n" +
                   newsData,
               },
             ],
@@ -601,19 +716,20 @@
         },
       };
       const result = await C.callGeminiAPI(payload, { apiKey: apiKeys.gemini, signal: job.signal });
-      const text = C.getCandidateText(result);
-      if (!text) throw new Error("AIからの応答が空です。");
+      const textOut = C.getCandidateText(result);
+      if (!textOut) throw new Error("AIからの応答が空です。");
 
       resultElement.textContent = "";
       const strong = document.createElement("strong");
       strong.textContent = "AIの解説: ";
       resultElement.appendChild(strong);
-      resultElement.appendChild(document.createTextNode(text));
+      resultElement.appendChild(document.createTextNode(textOut));
       resultElement.classList.remove("hidden");
     } catch (error) {
-      if (error && error.name === "AbortError") return;
-      resultElement.textContent = "取得失敗: " + C.friendlyErrorMessage(error);
-      resultElement.classList.remove("hidden");
+      if (!C.isAbortError(error)) {
+        resultElement.textContent = "取得失敗: " + C.friendlyErrorMessage(error);
+        resultElement.classList.remove("hidden");
+      }
     } finally {
       endJob("whyMoved", job);
       btnElement.textContent = originalLabel;
@@ -657,6 +773,7 @@
       renderMyPortfolio();
       C.createIconsIn(document.body);
       C.pruneCaches();
+      C.installGlobalErrorHandlers();
     });
 
     // DOMContentLoaded 済みの場合（遅延読込対策）
@@ -665,6 +782,7 @@
       renderMyPortfolio();
       C.createIconsIn(document.body);
       C.pruneCaches();
+      C.installGlobalErrorHandlers();
     }
   }
 

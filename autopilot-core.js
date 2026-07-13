@@ -36,6 +36,8 @@
   const FETCH_CONCURRENCY = 3;
   const GEMINI_MAX_ROUNDS = 2;
   const GEMINI_BASE_DELAY_MS = 800;
+  const FETCH_TIMEOUT_MS = 45000;
+  const GEMINI_TIMEOUT_MS = 90000;
 
   const DISCOVER_RESPONSE_SCHEMA = {
     type: "OBJECT",
@@ -180,9 +182,79 @@
     try {
       localStorage.setItem(key, value);
       return true;
-    } catch (_) {
+    } catch (e) {
+      if (e && (e.name === "QuotaExceededError" || e.code === 22)) {
+        console.warn("localStorage quota exceeded:", key);
+      }
       return false;
     }
+  }
+
+  function isAbortError(error) {
+    if (!error) return false;
+    if (error.name === "AbortError") return true;
+    const msg = String(error.message || error);
+    return /aborted|The user aborted|signal is aborted/i.test(msg);
+  }
+
+  function assertOnline() {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      throw new Error("オフラインです。インターネット接続を確認して、もう一度お試しください。");
+    }
+  }
+
+  function requireCompleteApiKeys(keys) {
+    keys = keys || getApiKeys();
+    const missing = [];
+    if (!keys.gemini) missing.push("Gemini");
+    if (!keys.finnhub) missing.push("Finnhub");
+    if (!keys.alpha) missing.push("Alpha Vantage");
+    if (!keys.tavily) missing.push("Tavily");
+    if (missing.length) {
+      throw new Error(
+        "APIキーが未設定です（" + missing.join(" / ") + "）。画面右上から再設定してください。"
+      );
+    }
+    return keys;
+  }
+
+  function mergeAbortSignal(parentSignal, timeoutMs) {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(function () {
+      timedOut = true;
+      try {
+        controller.abort();
+      } catch (_) {
+        /* ignore */
+      }
+    }, timeoutMs || FETCH_TIMEOUT_MS);
+
+    function onParentAbort() {
+      try {
+        controller.abort();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    if (parentSignal) {
+      if (parentSignal.aborted) onParentAbort();
+      else parentSignal.addEventListener("abort", onParentAbort, { once: true });
+    }
+
+    return {
+      signal: controller.signal,
+      didTimeout: function () {
+        return timedOut;
+      },
+      cleanup: function () {
+        clearTimeout(timer);
+        if (parentSignal) {
+          parentSignal.removeEventListener("abort", onParentAbort);
+        }
+      },
+    };
   }
 
   function removeStorage(key) {
@@ -240,7 +312,7 @@
   }
 
   function saveMyAssets(assets) {
-    setStorage(STORAGE_KEYS.assets, JSON.stringify(assets || []));
+    return setStorage(STORAGE_KEYS.assets, JSON.stringify(assets || []));
   }
 
   function pruneCaches() {
@@ -310,20 +382,27 @@
   }
 
   function friendlyErrorMessage(error) {
-    if (error && error.name === "AbortError") {
+    if (isAbortError(error)) {
       return "処理をキャンセルしました。";
     }
     const msg = error && error.message ? String(error.message) : String(error || "");
+    if (/タイムアウト|timeout/i.test(msg)) {
+      return "通信がタイムアウトしました。少し待ってから再度お試しください。";
+    }
+    if (/オフライン/i.test(msg)) {
+      return msg;
+    }
     if (/429|503|混み合|RETRY|busy|quota|rate limit/i.test(msg)) {
       return "現在データ取得元が混み合っています。少し待ってから再度お試しください。";
     }
     if (/Failed to fetch|network|通信|NetworkError/i.test(msg)) {
       return "通信に失敗しました。インターネット接続を確認して、もう一度お試しください。";
     }
-    if (/API Error|APIキー|api key|401|403/i.test(msg)) {
+    if (/API Error|APIキー|api key|401|403|未設定/i.test(msg)) {
+      if (/未設定/.test(msg)) return msg;
       return "データ取得に失敗しました。APIキー設定をご確認のうえ、再度お試しください。";
     }
-    if (/JSON|Structured|パース|応答が空/i.test(msg)) {
+    if (/JSON|Structured|パース|応答が空|ブロック|制限/i.test(msg)) {
       return "結果の読み取りに失敗しました。少し時間をおいて再度お試しください。";
     }
     return msg || "うまく処理できませんでした。もう一度お試しください。";
@@ -394,17 +473,48 @@
 
   async function fetchJson(url, options) {
     options = options || {};
-    const res = await fetch(url, options);
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error("API Error: " + res.status + " " + errText.slice(0, 300));
+    assertOnline();
+    const timeoutMs = options.timeoutMs || FETCH_TIMEOUT_MS;
+    const linked = mergeAbortSignal(options.signal, timeoutMs);
+    const fetchOpts = Object.assign({}, options);
+    delete fetchOpts.timeoutMs;
+    fetchOpts.signal = linked.signal;
+
+    try {
+      const res = await fetch(url, fetchOpts);
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        const status = res.status;
+        if (status === 429 || status === 503) {
+          throw new Error("現在データ取得元が混み合っています。少し待ってから再度お試しください。");
+        }
+        if (status === 401 || status === 403) {
+          throw new Error("APIキーが無効か権限がありません。設定を確認してください。");
+        }
+        throw new Error("API Error: " + status + " " + errText.slice(0, 300));
+      }
+      const text = await res.text();
+      if (!text) return {};
+      const data = safeJsonParse(text, null);
+      if (data == null) {
+        throw new Error("サーバー応答の JSON パースに失敗しました。");
+      }
+      return data;
+    } catch (e) {
+      if (linked.didTimeout()) {
+        throw new Error("通信がタイムアウトしました。少し待ってから再度お試しください。");
+      }
+      if (isAbortError(e)) throw e;
+      throw e;
+    } finally {
+      linked.cleanup();
     }
-    return res.json();
   }
 
   async function fetchFinnhubData(ticker, apiKeys, signal) {
     const key = (apiKeys && apiKeys.finnhub) || getApiKeys().finnhub;
     if (!key) throw new Error("Finnhub APIキーが未設定です。");
+    if (!ticker) throw new Error("銘柄コードが空です。");
     const data = await fetchJson(
       "https://finnhub.io/api/v1/quote?symbol=" +
         encodeURIComponent(ticker) +
@@ -412,6 +522,9 @@
         encodeURIComponent(key),
       { signal: signal }
     );
+    if (data.error) {
+      throw new Error("Finnhub: " + String(data.error));
+    }
     if (data.c === 0 && data.d == null) return "データなし";
     return "現在値: $" + data.c + ", 前日比: $" + data.d + " (" + data.dp + "%)";
   }
@@ -419,6 +532,7 @@
   async function fetchAlphaVantageData(ticker, apiKeys, signal) {
     const key = (apiKeys && apiKeys.alpha) || getApiKeys().alpha;
     if (!key) throw new Error("Alpha Vantage APIキーが未設定です。");
+    if (!ticker) throw new Error("銘柄コードが空です。");
     const data = await fetchJson(
       "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" +
         encodeURIComponent(ticker) +
@@ -432,6 +546,9 @@
     }
     if (data.Note || data.Information) {
       throw new Error("現在データ取得元が混み合っています。少し待ってから再度お試しください。");
+    }
+    if (data["Error Message"]) {
+      throw new Error("Alpha Vantage: " + String(data["Error Message"]));
     }
     return "データなし";
   }
@@ -450,6 +567,9 @@
       }),
       signal: signal,
     });
+    if (data.detail || data.error) {
+      throw new Error("Tavily: " + String(data.detail || data.error));
+    }
     return data.answer || "関連ニュースなし";
   }
 
@@ -496,32 +616,42 @@
 
   async function callGeminiAPI(payload, options) {
     options = options || {};
+    assertOnline();
     const apiKey = options.apiKey || getGeminiApiKey();
     if (!apiKey) throw new Error("Gemini APIキーが未設定です。");
-    const signal = options.signal;
+    const parentSignal = options.signal;
     const models = options.models || GEMINI_MODELS;
     const maxRounds = options.maxRounds || GEMINI_MAX_ROUNDS;
+    const timeoutMs = options.timeoutMs || GEMINI_TIMEOUT_MS;
 
-    // 呼び出し元のオブジェクトを破壊しない
     const body = Object.assign({}, payload);
     if (body.tools) delete body.tools;
-    const bodyText = JSON.stringify(body);
+    let bodyText;
+    try {
+      bodyText = JSON.stringify(body);
+    } catch (e) {
+      throw new Error("リクエストの作成に失敗しました。");
+    }
 
     let lastError = null;
     for (let round = 0; round < maxRounds; round++) {
       for (let i = 0; i < models.length; i++) {
+        if (parentSignal && parentSignal.aborted) {
+          throw parentSignal.reason || new DOMException("Aborted", "AbortError");
+        }
         const model = models[i];
         const url =
           "https://generativelanguage.googleapis.com/v1beta/models/" +
           model +
           ":generateContent?key=" +
           encodeURIComponent(apiKey);
+        const linked = mergeAbortSignal(parentSignal, timeoutMs);
         try {
           const response = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: bodyText,
-            signal: signal,
+            signal: linked.signal,
           });
           if (!response.ok) {
             const errText = await response.text().catch(() => "");
@@ -531,22 +661,41 @@
               await sleep(delay);
               continue;
             }
+            if (response.status === 401 || response.status === 403) {
+              throw new Error("Gemini APIキーが無効か権限がありません。設定を確認してください。");
+            }
             throw new Error("API Error: " + response.status + " " + errText.slice(0, 400));
           }
-          return await response.json();
+          const rawText = await response.text();
+          const data = safeJsonParse(rawText, null);
+          if (data == null) {
+            throw new Error("Gemini応答の JSON パースに失敗しました。");
+          }
+          if (data.error) {
+            const em =
+              (data.error && data.error.message) || JSON.stringify(data.error).slice(0, 200);
+            throw new Error("API Error: " + em);
+          }
+          return data;
         } catch (e) {
-          if (e && e.name === "AbortError") throw e;
+          if (linked.didTimeout()) {
+            lastError = new Error("通信がタイムアウトしました。少し待ってから再度お試しください。");
+            await sleep(GEMINI_BASE_DELAY_MS);
+            continue;
+          }
+          if (isAbortError(e)) throw e;
           if (e && e.message === "RETRY") {
             lastError = e;
             continue;
           }
-          // 一時的なネットワーク失敗も短い待機後に次モデルへ
-          if (/Failed to fetch|NetworkError/i.test(String(e && e.message))) {
+          if (/Failed to fetch|NetworkError|タイムアウト/i.test(String(e && e.message))) {
             lastError = e;
             await sleep(GEMINI_BASE_DELAY_MS);
             continue;
           }
           throw e;
+        } finally {
+          linked.cleanup();
         }
       }
     }
@@ -573,6 +722,73 @@
     for (let i = 0; i < n; i++) workers.push(worker());
     await Promise.all(workers);
     return results;
+  }
+
+  /** 各要素の失敗を握りつぶさず、成功/失敗を分けて返す */
+  async function mapPoolSettled(items, concurrency, iterator) {
+    const settled = await mapPool(items, concurrency, async (item, index) => {
+      try {
+        const value = await iterator(item, index);
+        return { status: "fulfilled", value: value, item: item, index: index };
+      } catch (reason) {
+        if (isAbortError(reason)) throw reason;
+        return { status: "rejected", reason: reason, item: item, index: index };
+      }
+    });
+    return settled;
+  }
+
+  function assertDiscoverPayload(data) {
+    if (!data || typeof data !== "object") {
+      throw new Error("分析結果の形式が不正です。");
+    }
+    if (!data.marketSignal || typeof data.marketSignal !== "object") {
+      throw new Error("相場シグナルが取得できませんでした。");
+    }
+    if (!Array.isArray(data.ranking20)) {
+      throw new Error("ランキング結果が取得できませんでした。");
+    }
+    return data;
+  }
+
+  function assertPortfolioPayload(data) {
+    if (!data || typeof data !== "object") {
+      throw new Error("診断結果の形式が不正です。");
+    }
+    if (typeof data.correlationRisk !== "string") {
+      data.correlationRisk = String(data.correlationRisk || "");
+    }
+    if (!Array.isArray(data.individualVerdicts)) {
+      data.individualVerdicts = [];
+    }
+    return data;
+  }
+
+  function assertDeepScanPayload(data) {
+    if (!data || typeof data !== "object") {
+      throw new Error("カルテ結果の形式が不正です。");
+    }
+    data.finalVerdict = data.finalVerdict || {};
+    data.radarScores = data.radarScores || {};
+    return data;
+  }
+
+  let globalHandlersInstalled = false;
+  function installGlobalErrorHandlers() {
+    if (globalHandlersInstalled || typeof window === "undefined") return;
+    globalHandlersInstalled = true;
+    window.addEventListener("unhandledrejection", function (event) {
+      const reason = event && event.reason;
+      if (isAbortError(reason)) return;
+      console.error("unhandledrejection", reason);
+      showToast(friendlyErrorMessage(reason), "error");
+    });
+    window.addEventListener("error", function (event) {
+      if (!event || !event.error) return;
+      if (isAbortError(event.error)) return;
+      console.error("window.error", event.error);
+      showToast(friendlyErrorMessage(event.error), "error");
+    });
   }
 
   function isUsTicker(ticker) {
@@ -657,6 +873,9 @@
     showToast: showToast,
     clearToasts: clearToasts,
     friendlyErrorMessage: friendlyErrorMessage,
+    isAbortError: isAbortError,
+    assertOnline: assertOnline,
+    requireCompleteApiKeys: requireCompleteApiKeys,
     createIconsIn: createIconsIn,
     fetchFinnhubData: fetchFinnhubData,
     fetchAlphaVantageData: fetchAlphaVantageData,
@@ -665,6 +884,11 @@
     getCandidateText: getCandidateText,
     callGeminiAPI: callGeminiAPI,
     mapPool: mapPool,
+    mapPoolSettled: mapPoolSettled,
+    assertDiscoverPayload: assertDiscoverPayload,
+    assertPortfolioPayload: assertPortfolioPayload,
+    assertDeepScanPayload: assertDeepScanPayload,
+    installGlobalErrorHandlers: installGlobalErrorHandlers,
     isUsTicker: isUsTicker,
     isJapaneseTicker: isJapaneseTicker,
     scoreOrDefault: scoreOrDefault,
