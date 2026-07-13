@@ -80,7 +80,7 @@
         .break-words { word-wrap: break-word; overflow-wrap: break-word; }
 
         .main-tab {
-            padding: 0.75rem 1.5rem; border-bottom: 2px solid transparent; color: #64748b; font-weight: bold;
+            padding: 0.75rem 1.5rem; border-bottom: 2px solid transparent; color: #94a3b8; font-weight: bold; font-size: 1.05rem;
             transition: all 0.3s; cursor: pointer; display: flex; align-items: center;
         }
         .main-tab.active { border-bottom-color: #a855f7; color: #fff; background: rgba(168, 85, 247, 0.1); }
@@ -98,9 +98,87 @@
             position: absolute; top: 0; left: 0; animation: scan 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
         @keyframes scan { 0% { top: -10%; opacity: 0; } 50% { opacity: 1; } 100% { top: 110%; opacity: 0; } }
+
+        /* シニア向け Toast 通知 */
+        #toast-container {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 200;
+            width: min(92vw, 36rem);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            pointer-events: none;
+        }
+        .toast-banner {
+            pointer-events: auto;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(15, 23, 42, 0.96);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+            color: #f8fafc;
+            font-size: 1.05rem;
+            line-height: 1.55;
+            font-weight: 700;
+            opacity: 0;
+            transform: translateY(-12px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .toast-banner.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast-banner.toast-error {
+            border-color: rgba(248, 113, 113, 0.55);
+            background: linear-gradient(135deg, rgba(127, 29, 29, 0.95), rgba(15, 23, 42, 0.98));
+        }
+        .toast-banner.toast-info {
+            border-color: rgba(96, 165, 250, 0.55);
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.95), rgba(15, 23, 42, 0.98));
+        }
+        .toast-banner.toast-success {
+            border-color: rgba(52, 211, 153, 0.55);
+            background: linear-gradient(135deg, rgba(6, 78, 59, 0.95), rgba(15, 23, 42, 0.98));
+        }
+        .toast-banner .toast-close {
+            margin-left: auto;
+            flex-shrink: 0;
+            color: #e2e8f0;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0.15rem;
+            border-radius: 0.5rem;
+        }
+        .toast-banner .toast-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        .verdict-buy {
+            background: rgba(16, 185, 129, 0.2) !important;
+            border-color: #34d399 !important;
+            color: #6ee7b7 !important;
+        }
+        .verdict-sell {
+            background: rgba(239, 68, 68, 0.2) !important;
+            border-color: #f87171 !important;
+            color: #fca5a5 !important;
+        }
+        .verdict-hold {
+            background: rgba(100, 116, 139, 0.25) !important;
+            border-color: #94a3b8 !important;
+            color: #e2e8f0 !important;
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col relative break-words">
+<body class="min-h-screen flex flex-col relative break-words text-base">
+
+    <!-- 画面上部の優しい通知バナー（Toast） -->
+    <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
     <div id="auth-overlay" class="fixed inset-0 bg-[#020617] z-[100] hidden items-center justify-center p-4 backdrop-blur-xl overflow-y-auto">
         <div class="glass-panel p-6 md:p-8 max-w-md w-full text-center relative shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-slate-700 my-auto">
@@ -109,39 +187,39 @@
                 <i data-lucide="key" class="w-8 h-8 text-purple-400"></i>
             </div>
             <h2 class="text-2xl font-black text-white mb-2 tracking-tight">初期設定（パスワード登録）</h2>
-            <p class="text-xs text-slate-400 mb-6 leading-relaxed">AIが世界中のデータを集めて分析するために、<br>4つの無料専用パスワード(APIキー)が必要です。</p>
+            <p class="text-sm text-slate-200 mb-6 leading-relaxed">AIが世界中のデータを集めて分析するために、<br>4つの無料専用パスワード(APIキー)が必要です。</p>
             
             <div class="text-left space-y-4 mb-6 max-h-[45vh] overflow-y-auto custom-scrollbar pr-2">
                 <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
                     <div class="flex justify-between items-end mb-1">
-                        <label class="text-xs font-bold text-blue-400">1. AIの頭脳 (Gemini API)</label>
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-[10px] bg-blue-900/50 text-blue-200 px-2 py-1 rounded border border-blue-500/30 hover:bg-blue-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
+                        <label class="text-sm font-bold text-blue-300">1. AIの頭脳 (Gemini API)</label>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-sm bg-blue-900/50 text-blue-200 px-2 py-1 rounded border border-blue-500/30 hover:bg-blue-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
                     </div>
-                    <input type="password" id="api-key-gemini" placeholder="AIza... から始まる文字" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 font-mono text-sm">
+                    <input type="password" id="api-key-gemini" placeholder="AIza... から始まる文字" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 font-mono text-base">
                 </div>
 
                 <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
                     <div class="flex justify-between items-end mb-1">
-                        <label class="text-xs font-bold text-green-400">2. 米国株データ (Finnhub)</label>
-                        <a href="https://finnhub.io/register" target="_blank" rel="noopener noreferrer" class="text-[10px] bg-green-900/50 text-green-200 px-2 py-1 rounded border border-green-500/30 hover:bg-green-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
+                        <label class="text-sm font-bold text-green-300">2. 米国株データ (Finnhub)</label>
+                        <a href="https://finnhub.io/register" target="_blank" rel="noopener noreferrer" class="text-sm bg-green-900/50 text-green-200 px-2 py-1 rounded border border-green-500/30 hover:bg-green-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
                     </div>
-                    <input type="password" id="api-key-finnhub" placeholder="c... から始まる文字" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500 font-mono text-sm">
+                    <input type="password" id="api-key-finnhub" placeholder="c... から始まる文字" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500 font-mono text-base">
                 </div>
 
                 <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
                     <div class="flex justify-between items-end mb-1">
-                        <label class="text-xs font-bold text-amber-400">3. 日本株データ (Alpha Vantage)</label>
-                        <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="text-[10px] bg-amber-900/50 text-amber-200 px-2 py-1 rounded border border-amber-500/30 hover:bg-amber-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
+                        <label class="text-sm font-bold text-amber-300">3. 日本株データ (Alpha Vantage)</label>
+                        <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="text-sm bg-amber-900/50 text-amber-200 px-2 py-1 rounded border border-amber-500/30 hover:bg-amber-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
                     </div>
-                    <input type="password" id="api-key-alpha" placeholder="アルファベットと数字の羅列" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 font-mono text-sm">
+                    <input type="password" id="api-key-alpha" placeholder="アルファベットと数字の羅列" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 font-mono text-base">
                 </div>
 
                 <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
                     <div class="flex justify-between items-end mb-1">
-                        <label class="text-xs font-bold text-purple-400">4. 最新ニュース (Tavily API)</label>
-                        <a href="https://app.tavily.com/sign-in" target="_blank" rel="noopener noreferrer" class="text-[10px] bg-purple-900/50 text-purple-200 px-2 py-1 rounded border border-purple-500/30 hover:bg-purple-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
+                        <label class="text-sm font-bold text-purple-300">4. 最新ニュース (Tavily API)</label>
+                        <a href="https://app.tavily.com/sign-in" target="_blank" rel="noopener noreferrer" class="text-sm bg-purple-900/50 text-purple-200 px-2 py-1 rounded border border-purple-500/30 hover:bg-purple-800 transition-colors"><i data-lucide="external-link" class="w-3 h-3 inline mr-1 -mt-0.5"></i>取得サイトへ</a>
                     </div>
-                    <input type="password" id="api-key-tavily" placeholder="tvly-... から始まる文字" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-500 font-mono text-sm">
+                    <input type="password" id="api-key-tavily" placeholder="tvly-... から始まる文字" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-500 font-mono text-base">
                 </div>
             </div>
 
@@ -158,10 +236,10 @@
                     <i data-lucide="infinity" class="w-6 h-6 text-white"></i>
                 </div>
                 <h1 class="text-xl md:text-2xl font-black en-font tracking-tighter text-white">
-                    AUTO-PILOT<span class="ml-2 text-sm text-purple-400 font-bold hidden sm:inline"> JP & US v6.5</span>
+                    AUTO-PILOT<span class="ml-2 text-base text-purple-300 font-bold hidden sm:inline"> JP & US v6.5</span>
                 </h1>
             </div>
-            <button onclick="resetApiKey()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors" title="キーをリセット">
+            <button onclick="resetApiKey()" class="text-slate-300 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors" title="キーをリセット">
                 <i data-lucide="log-out" class="w-5 h-5"></i>
             </button>
         </div>
@@ -188,7 +266,7 @@
                 <i data-lucide="brain" class="w-10 h-10 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></i>
             </div>
             <h3 class="text-2xl font-black mb-4 tracking-widest text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500" id="loading-title">AI多段思考プロセスを実行中...</h3>
-            <p id="loading-text" class="text-slate-400 text-sm h-10 flex flex-col justify-center text-center max-w-md">ステップを初期化しています...</p>
+            <p id="loading-text" class="text-slate-200 text-base h-10 flex flex-col justify-center text-center max-w-md">ステップを初期化しています...</p>
         </div>
 
         <div id="tab-discover" class="tab-content active gap-8">
@@ -196,7 +274,7 @@
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
                 
                 <h2 class="text-3xl md:text-5xl lg:text-6xl font-black mb-6 tracking-tight text-white leading-tight mt-4">AI予測エンジン <span class="text-2xl md:text-4xl text-purple-400 block mt-2">JP & US Edition</span></h2>
-                <p class="text-slate-400 mb-8 max-w-2xl mx-auto text-sm md:text-lg">
+                <p class="text-slate-200 mb-8 max-w-2xl mx-auto text-sm md:text-lg">
                     指定された条件に合わせてAIが市場を瞬時に検索・分析し、<br class="hidden sm:block">
                     今最も安全で利益が狙える「買い銘柄」を発掘します。
                 </p>
@@ -207,14 +285,14 @@
                     </h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
-                            <label class="block text-[11px] text-slate-400 mb-1 font-bold">国内市場セグメント</label>
+                            <label class="block text-sm text-slate-200 mb-1 font-bold">国内市場セグメント</label>
                             <select id="setting-segment" class="w-full bg-transparent text-white text-sm focus:outline-none en-font cursor-pointer">
                                 <option value="日本のすべての市場" class="bg-slate-900">国内市場すべて</option>
                                 <option value="日本の【プライム市場】のみ" class="bg-slate-900">プライム市場のみ</option>
                             </select>
                         </div>
                         <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
-                            <label class="block text-[11px] text-slate-400 mb-1 font-bold">情報の鮮度</label>
+                            <label class="block text-sm text-slate-200 mb-1 font-bold">情報の鮮度</label>
                             <select id="setting-timeframe" class="w-full bg-transparent text-white text-sm focus:outline-none en-font cursor-pointer">
                                 <option value="直近24時間" class="bg-slate-900">直近24時間</option>
                                 <option value="直近1週間" class="bg-slate-900">直近1週間</option>
@@ -222,19 +300,19 @@
                             </select>
                         </div>
                         <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
-                            <label class="block text-[11px] text-slate-400 mb-1 font-bold">株価(円/$) ※空欄可</label>
+                            <label class="block text-sm text-slate-200 mb-1 font-bold">株価(円/$) ※空欄可</label>
                             <div class="flex items-center space-x-2">
                                 <input type="number" id="setting-price-min" placeholder="下限" min="1" class="w-1/2 bg-transparent text-white text-sm focus:outline-none en-font">
-                                <span class="text-slate-500 text-xs">-</span>
+                                <span class="text-slate-300 text-sm">-</span>
                                 <input type="number" id="setting-price-max" placeholder="上限" min="1" class="w-1/2 bg-transparent text-white text-sm focus:outline-none en-font">
                             </div>
                         </div>
                         <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
-                            <label class="block text-[11px] text-slate-400 mb-1 font-bold">目標配当利回り(%)</label>
+                            <label class="block text-sm text-slate-200 mb-1 font-bold">目標配当利回り(%)</label>
                             <input type="number" id="setting-yield" placeholder="0" min="0" step="0.1" value="0" class="w-full bg-transparent text-white text-sm focus:outline-none en-font">
                         </div>
                         <div class="bg-amber-900/10 p-3 rounded-xl border border-amber-500/30">
-                            <label class="block text-[11px] text-amber-400 mb-1 font-bold"><i data-lucide="gift" class="w-3 h-3 inline mr-1"></i>優待ジャンル</label>
+                            <label class="block text-sm text-amber-300 mb-1 font-bold"><i data-lucide="gift" class="w-3 h-3 inline mr-1"></i>優待ジャンル</label>
                             <select id="setting-yutai-genre" class="w-full bg-transparent text-white text-sm focus:outline-none cursor-pointer">
                                 <option value="指定なし" class="bg-slate-900">指定なし</option>
                                 <option value="クオカード・金券" class="bg-slate-900">クオカード・金券</option>
@@ -259,13 +337,13 @@
             <div id="discover-results" class="hidden flex-col gap-8 opacity-0 transition-opacity duration-1000">
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     <div class="lg:col-span-1 glass-panel p-6 flex flex-col items-center justify-center text-center">
-                        <h3 class="text-xs text-slate-400 font-bold mb-4">現在の相場状況</h3>
+                        <h3 class="text-sm text-slate-200 font-bold mb-4">現在の相場状況</h3>
                         <div id="signal-color" class="w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_currentColor]"><i data-lucide="activity" class="w-8 h-8 text-slate-900"></i></div>
-                        <div id="signal-text" class="text-xl font-black text-white mb-2 tracking-wider">---</div>
-                        <p id="signal-reason" class="text-slate-400 text-xs line-clamp-4 mb-4"></p>
+                        <div id="signal-text" class="text-2xl md:text-3xl font-black text-white mb-2 tracking-wider">---</div>
+                        <p id="signal-reason" class="text-slate-200 text-sm line-clamp-6 mb-4 text-base"></p>
                     </div>
                     <div class="lg:col-span-3 glass-panel p-6">
-                        <h3 class="text-xs text-slate-400 mb-4 font-bold flex items-center"><i data-lucide="flame" class="w-4 h-4 mr-2 text-orange-400"></i> 資金流入ヒートマップ</h3>
+                        <h3 class="text-sm text-slate-200 mb-4 font-bold flex items-center"><i data-lucide="flame" class="w-4 h-4 mr-2 text-orange-400"></i> 資金流入ヒートマップ</h3>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 h-[calc(100%-2rem)]" id="heatmap-container"></div>
                     </div>
                 </div>
@@ -279,17 +357,17 @@
         <div id="tab-myportfolio" class="tab-content gap-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="glass-panel p-6 md:col-span-2 relative overflow-hidden">
-                    <h3 class="text-xs font-bold text-slate-400 mb-6 tracking-widest"><i data-lucide="wallet" class="w-4 h-4 inline mr-2"></i>現在の総評価額</h3>
+                    <h3 class="text-sm font-bold text-slate-200 mb-6 tracking-widest"><i data-lucide="wallet" class="w-4 h-4 inline mr-2"></i>現在の総評価額</h3>
                     <div class="flex flex-col sm:flex-row justify-between sm:items-end relative z-10">
                         <div>
                             <div class="text-5xl md:text-6xl font-black text-white en-font" id="my-total-value">¥0</div>
-                            <div class="text-sm font-bold text-slate-400 mt-2">総投資額: <span id="my-total-invested" class="text-slate-300 en-font">¥0</span></div>
+                            <div class="text-sm font-bold text-slate-200 mt-2">総投資額: <span id="my-total-invested" class="text-slate-300 en-font">¥0</span></div>
                         </div>
                     </div>
                 </div>
                 <div class="glass-panel p-6 flex flex-col justify-center items-center text-center group">
                     <i data-lucide="stethoscope" class="w-10 h-10 text-emerald-400 mb-4 group-hover:scale-110 transition-transform"></i>
-                    <p class="text-xs font-bold text-slate-300 mb-5 leading-relaxed">保有銘柄の最新状況と<br><span class="text-emerald-400 font-bold">「全体リスク」</span>をAIが診断します。</p>
+                    <p class="text-sm font-bold text-slate-200 mb-5 leading-relaxed">保有銘柄の最新状況と<br><span class="text-emerald-400 font-bold">「全体リスク」</span>をAIが診断します。</p>
                     <button onclick="scanMyPortfolio()" class="btn-zenith !bg-[linear-gradient(135deg,#059669,#10b981)] text-white text-sm font-bold px-6 py-4 rounded-xl w-full flex items-center justify-center shadow-lg">
                         <i data-lucide="activity" class="w-4 h-4 mr-2"></i> 全体をAI診断する
                     </button>
@@ -298,11 +376,11 @@
 
             <div id="my-market-commentary" class="hidden glass-panel p-6 border-blue-500/30">
                 <div class="flex items-center mb-4"><i data-lucide="network" class="w-5 h-5 text-blue-400 mr-3"></i><h3 class="font-bold text-blue-400">ポートフォリオのリスク診断</h3></div>
-                <p id="my-commentary-text" class="text-sm text-slate-300 leading-relaxed"></p>
+                <p id="my-commentary-text" class="text-base text-slate-200 leading-relaxed"></p>
             </div>
 
             <div class="glass-panel p-5">
-                <h3 class="text-xs font-bold text-slate-400 mb-3 tracking-widest">保有銘柄を追加する</h3>
+                <h3 class="text-sm font-bold text-slate-200 mb-3 tracking-widest">保有銘柄を追加する</h3>
                 <form id="add-asset-form" class="flex flex-col sm:flex-row gap-3">
                     <input type="text" id="add-ticker" placeholder="ティッカー (例: 7203, AAPL)" required class="flex-grow bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white">
                     <input type="number" id="add-price" placeholder="取得単価" class="w-full sm:w-1/4 bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white" step="0.01">
@@ -312,7 +390,7 @@
             </div>
 
             <div id="my-portfolio-list" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
-            <div id="my-portfolio-empty" class="text-center text-slate-500 py-16 glass-panel">保有銘柄がありません</div>
+            <div id="my-portfolio-empty" class="text-center text-slate-300 text-base py-16 glass-panel">保有銘柄がありません</div>
         </div>
     </main>
 
@@ -321,9 +399,9 @@
             <div class="flex-grow">
                 <div class="flex items-end gap-3 mb-2">
                     <h4 class="text-2xl font-black text-white ticker-text en-font">TICKER</h4>
-                    <p class="text-sm text-slate-300 company-text mb-0.5 font-bold">企業名</p>
+                    <p class="text-base text-slate-200 company-text mb-0.5 font-bold">企業名</p>
                 </div>
-                <p class="text-xs text-slate-400 mt-2 reason-text line-clamp-2">推奨理由</p>
+                <p class="text-sm text-slate-200 mt-2 reason-text line-clamp-3 text-base">推奨理由</p>
             </div>
             <div class="md:w-1/4 flex flex-col justify-center">
                 <button class="deep-scan-btn w-full px-6 py-3 bg-purple-600 text-white rounded-xl text-sm font-bold border border-purple-400/30"><i data-lucide="fingerprint" class="w-4 h-4 mr-2 inline"></i> 企業カルテ</button>
@@ -339,16 +417,16 @@
             </div>
             <div class="p-5 flex flex-col flex-grow bg-slate-900/30">
                 <div class="bg-slate-900/80 border border-slate-700/50 rounded-xl p-3 mb-4 flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-400">専門家判定</span>
-                    <span class="px-3 py-1 rounded font-bold text-xs border verdict-badge bg-slate-800 border-slate-700 text-slate-400 tracking-wider">未診断</span>
+                    <span class="text-sm font-bold text-slate-200">専門家判定</span>
+                    <span class="rounded-lg font-black text-xl border-2 verdict-badge bg-slate-800 border-slate-500 text-slate-200 tracking-wider px-4 py-2">未診断</span>
                 </div>
-                <div class="mb-4"><p class="text-xs text-slate-300 advice-text line-clamp-3">「全体をAI診断する」を押してください。</p></div>
+                <div class="mb-4"><p class="text-sm text-slate-200 advice-text line-clamp-4 text-base">「全体をAI診断する」を押してください。</p></div>
                 <div class="mt-auto pt-4 border-t border-slate-700/50">
-                    <button class="why-moved-btn w-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg py-2 text-xs font-bold">なぜ動いた？（最新ニュース）</button>
-                    <div class="why-moved-result hidden mt-3 p-3 bg-slate-900/80 rounded-lg border border-slate-700 text-[11px] text-slate-300"></div>
+                    <button class="why-moved-btn w-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg py-2 text-sm font-bold">なぜ動いた？（最新ニュース）</button>
+                    <div class="why-moved-result hidden mt-3 p-3 bg-slate-900/80 rounded-lg border border-slate-700 text-sm text-slate-200"></div>
                 </div>
             </div>
-            <button class="deep-scan-btn w-full py-3 bg-slate-900/80 text-purple-400 border-t border-slate-700/50 text-[11px] font-bold"><i data-lucide="search" class="w-3 h-3 mr-2 inline"></i> 企業カルテを開く</button>
+            <button class="deep-scan-btn w-full py-3 bg-slate-900/80 text-purple-300 border-t border-slate-700/50 text-base font-bold"><i data-lucide="search" class="w-4 h-4 mr-2 inline"></i> 企業カルテを開く</button>
         </div>
     </template>
 
@@ -357,32 +435,32 @@
             <div class="p-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/80 backdrop-blur z-20">
                 <div>
                     <h3 class="text-2xl font-black text-white">企業カルテ <span class="mx-2 text-slate-600">/</span> <span id="modal-title" class="text-purple-400 en-font">TICKER</span></h3>
-                    <p class="text-[11px] text-slate-400" id="modal-subtitle">企業名</p>
+                    <p class="text-sm text-slate-200" id="modal-subtitle">企業名</p>
                 </div>
-                <button id="close-modal-btn" class="text-slate-400 hover:text-white p-3"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button id="close-modal-btn" class="text-slate-300 hover:text-white p-3"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div class="p-8 overflow-y-auto flex-grow relative" id="modal-body">
                 <div id="modal-loading" class="absolute inset-0 bg-[#020617]/90 z-30 flex flex-col items-center justify-center">
                     <div class="scan-line-modal"></div>
                     <p class="text-2xl font-black text-purple-400 mb-3" id="modal-loading-text">データを分析・統合中...</p>
-                    <p id="modal-loading-subtext" class="text-sm text-slate-400 text-center max-w-md">外部APIから最新データとニュースを取得し、Geminiで分析しています。</p>
+                    <p id="modal-loading-subtext" class="text-base text-slate-200 text-center max-w-md">外部APIから最新データとニュースを取得し、Geminiで分析しています。</p>
                 </div>
                 <div id="modal-content-data" class="hidden flex-col gap-8">
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-2">
                         <div class="xl:col-span-1 bg-slate-900/40 rounded-2xl p-4 border border-slate-700 flex flex-col items-center justify-center">
-                            <h4 class="text-xs font-bold text-slate-400 mb-2">AI総合評価</h4>
+                            <h4 class="text-sm font-bold text-slate-200 mb-2">AI総合評価</h4>
                             <div class="relative w-full aspect-square max-w-[240px] h-[240px]"><canvas id="radarChart"></canvas></div>
                         </div>
                         <div class="xl:col-span-2 bg-gradient-to-r from-blue-900/20 to-pink-900/20 rounded-2xl p-6 border border-purple-500/50">
-                            <div class="flex items-center justify-between mb-4"><h4 class="text-lg font-bold text-white">最終決断</h4><span id="modal-decision-badge" class="px-5 py-2 rounded-full font-black text-sm border">---</span></div>
-                            <p id="modal-final-conclusion" class="text-sm text-slate-200 leading-relaxed font-bold bg-slate-950/60 p-4 rounded-xl border border-slate-700/50"></p>
+                            <div class="flex items-center justify-between mb-4"><h4 class="text-lg font-bold text-white">最終決断</h4><span id="modal-decision-badge" class="px-6 py-3 rounded-full font-black text-2xl border-2">---</span></div>
+                            <p id="modal-final-conclusion" class="text-base text-slate-100 leading-relaxed font-bold bg-slate-950/60 p-4 rounded-xl border border-slate-700/50"></p>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="bg-blue-900/10 rounded-xl p-4 border border-blue-500/20"><h4 class="text-xs font-bold text-blue-400 mb-2">グロース(成長性)</h4><p class="text-xs text-slate-300" id="modal-genius-view"></p></div>
-                        <div class="bg-amber-900/10 rounded-xl p-4 border border-amber-500/20"><h4 class="text-xs font-bold text-amber-400 mb-2">バリュー(割安度)</h4><p class="text-xs text-slate-300" id="modal-veteran-view"></p></div>
-                        <div class="bg-emerald-900/10 rounded-xl p-4 border border-emerald-500/20"><h4 class="text-xs font-bold text-emerald-400 mb-2">マクロ(市場環境)</h4><p class="text-xs text-slate-300" id="modal-macro-view"></p></div>
-                        <div class="bg-fuchsia-900/10 rounded-xl p-4 border border-fuchsia-500/20"><h4 class="text-xs font-bold text-fuchsia-400 mb-2">クオンツ(データ)</h4><p class="text-xs text-slate-300" id="modal-quant-view"></p></div>
+                        <div class="bg-blue-900/10 rounded-xl p-4 border border-blue-500/20"><h4 class="text-base font-bold text-blue-300 mb-2">グロース(成長性)</h4><p class="text-base text-slate-100" id="modal-genius-view"></p></div>
+                        <div class="bg-amber-900/10 rounded-xl p-4 border border-amber-500/20"><h4 class="text-base font-bold text-amber-300 mb-2">バリュー(割安度)</h4><p class="text-base text-slate-100" id="modal-veteran-view"></p></div>
+                        <div class="bg-emerald-900/10 rounded-xl p-4 border border-emerald-500/20"><h4 class="text-base font-bold text-emerald-300 mb-2">マクロ(市場環境)</h4><p class="text-base text-slate-100" id="modal-macro-view"></p></div>
+                        <div class="bg-fuchsia-900/10 rounded-xl p-4 border border-fuchsia-500/20"><h4 class="text-base font-bold text-fuchsia-300 mb-2">クオンツ(データ)</h4><p class="text-base text-slate-100" id="modal-quant-view"></p></div>
                     </div>
                 </div>
             </div>
@@ -392,6 +470,73 @@
     <script>
         const appLogs = [];
         function addLog(level, message, details = "") { console.log(`[${level}] ${message}`, details); }
+
+        let toastTimer = null;
+        function ensureToastContainer() {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.setAttribute('aria-live', 'polite');
+                container.setAttribute('aria-atomic', 'true');
+                document.body.appendChild(container);
+            }
+            return container;
+        }
+
+        function friendlyErrorMessage(error) {
+            const msg = (error && error.message) ? String(error.message) : String(error || '');
+            if (/429|503|混み合|RETRY|busy|quota|rate limit/i.test(msg)) {
+                return '現在データ取得元が混み合っています。少し待ってから再度お試しください。';
+            }
+            if (/Failed to fetch|network|通信|NetworkError/i.test(msg)) {
+                return '通信に失敗しました。インターネット接続を確認して、もう一度お試しください。';
+            }
+            if (/API Error|APIキー|api key|401|403/i.test(msg)) {
+                return 'データ取得に失敗しました。APIキー設定をご確認のうえ、再度お試しください。';
+            }
+            if (/JSON|Structured|パース|応答が空/i.test(msg)) {
+                return '結果の読み取りに失敗しました。少し時間をおいて再度お試しください。';
+            }
+            return msg || 'うまく処理できませんでした。もう一度お試しください。';
+        }
+
+        function showToast(message, type = 'info', durationMs = 5500) {
+            const container = ensureToastContainer();
+            const banner = document.createElement('div');
+            const typeClass = type === 'error' ? 'toast-error' : (type === 'success' ? 'toast-success' : 'toast-info');
+            const iconName = type === 'error' ? 'alert-circle' : (type === 'success' ? 'check-circle' : 'info');
+            banner.className = `toast-banner ${typeClass}`;
+            banner.innerHTML = `
+                <i data-lucide="${iconName}" class="w-6 h-6 flex-shrink-0 mt-0.5"></i>
+                <span class="flex-grow">${message}</span>
+                <button type="button" class="toast-close" aria-label="閉じる"><i data-lucide="x" class="w-5 h-5"></i></button>
+            `;
+            const close = () => {
+                banner.classList.remove('show');
+                setTimeout(() => banner.remove(), 350);
+            };
+            banner.querySelector('.toast-close').addEventListener('click', close);
+            container.appendChild(banner);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            requestAnimationFrame(() => banner.classList.add('show'));
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(close, durationMs);
+        }
+
+        function applyVerdictStyle(el, verdict) {
+            if (!el) return;
+            el.classList.remove('verdict-buy', 'verdict-sell', 'verdict-hold', 'bg-slate-800', 'border-slate-500', 'text-slate-200');
+            const v = String(verdict || '').toUpperCase();
+            el.textContent = v || '未診断';
+            if (v === 'BUY' || v === 'STRONG_BUY') el.classList.add('verdict-buy', 'text-xl', 'font-black');
+            else if (v === 'SELL' || v === 'STRONG_SELL') el.classList.add('verdict-sell', 'text-xl', 'font-black');
+            else if (v === 'HOLD' || v === 'NEUTRAL') el.classList.add('verdict-hold', 'text-xl', 'font-black');
+            else {
+                el.classList.add('bg-slate-800', 'border-slate-500', 'text-slate-200', 'text-xl', 'font-black');
+            }
+        }
+
 
         let apiKey = localStorage.getItem('autopilot_api_key') || "";
         let finnhubKey = localStorage.getItem('finnhub_api_key') || "";
@@ -425,7 +570,7 @@
                 localStorage.setItem('tavily_api_key', tavilyKey);
                 addLog("INFO", "全APIキーを保存しました"); checkAuth();
             } else {
-                alert("4つすべてのAPIキーを入力してください。");
+                showToast("4つすべてのAPIキーを入力してください。右上のリンクから取得できます。", "error");
             }
         }
 
@@ -505,17 +650,128 @@
                     }
                 }
             }
-            throw new Error("AIモデルが大変混み合っています。");
+            throw new Error("現在データ取得元が混み合っています。少し待ってから再度お試しください。");
         }
 
-        function extractJSON(str) {
-            try { return JSON.parse(str); } catch(e) {}
-            let cleanStr = str.replace(/```json/gi, '').replace(/```/g, '').trim();
-            try { return JSON.parse(cleanStr); } catch(e) {}
-            const start = cleanStr.indexOf('{'); const end = cleanStr.lastIndexOf('}');
-            if (start !== -1 && end !== -1) return JSON.parse(cleanStr.substring(start, end + 1));
-            throw new Error("JSONパース失敗");
+        // Structured Outputs で保証された JSON を安全にパースする（文字列切り出しは行わない）
+        function parseStructuredResponse(apiResult) {
+            const text = apiResult?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) throw new Error("AIからの応答が空です。");
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                throw new Error("Structured Output の JSON パースに失敗しました: " + e.message);
+            }
         }
+
+        // --- Gemini Structured Outputs 用スキーマ定義 ---
+        const DISCOVER_RESPONSE_SCHEMA = {
+            type: "OBJECT",
+            properties: {
+                marketSignal: {
+                    type: "OBJECT",
+                    properties: {
+                        phase: {
+                            type: "STRING",
+                            format: "enum",
+                            enum: ["STRONG_BUY", "BUY", "NEUTRAL", "SELL", "STRONG_SELL"]
+                        },
+                        reason: { type: "STRING" }
+                    },
+                    required: ["phase", "reason"]
+                },
+                sectorHeatmap: {
+                    type: "ARRAY",
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            sectorName: { type: "STRING" },
+                            heat: {
+                                type: "STRING",
+                                format: "enum",
+                                enum: ["HOT", "WARM", "COLD"]
+                            },
+                            reason: { type: "STRING" }
+                        },
+                        required: ["sectorName", "heat", "reason"]
+                    }
+                },
+                ranking20: {
+                    type: "ARRAY",
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            rank: { type: "INTEGER" },
+                            ticker: { type: "STRING" },
+                            companyName: { type: "STRING" },
+                            sector: { type: "STRING" },
+                            score: { type: "INTEGER" },
+                            reason: { type: "STRING" }
+                        },
+                        required: ["rank", "ticker", "companyName", "sector", "score", "reason"]
+                    }
+                }
+            },
+            required: ["marketSignal", "sectorHeatmap", "ranking20"]
+        };
+
+        const PORTFOLIO_SCAN_RESPONSE_SCHEMA = {
+            type: "OBJECT",
+            properties: {
+                correlationRisk: { type: "STRING" },
+                individualVerdicts: {
+                    type: "ARRAY",
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            ticker: { type: "STRING" },
+                            verdict: {
+                                type: "STRING",
+                                format: "enum",
+                                enum: ["BUY", "HOLD", "SELL"]
+                            },
+                            advice: { type: "STRING" }
+                        },
+                        required: ["ticker", "verdict", "advice"]
+                    }
+                }
+            },
+            required: ["correlationRisk", "individualVerdicts"]
+        };
+
+        const DEEP_SCAN_RESPONSE_SCHEMA = {
+            type: "OBJECT",
+            properties: {
+                geniusView: { type: "STRING" },
+                veteranView: { type: "STRING" },
+                macroView: { type: "STRING" },
+                quantView: { type: "STRING" },
+                finalVerdict: {
+                    type: "OBJECT",
+                    properties: {
+                        decision: {
+                            type: "STRING",
+                            format: "enum",
+                            enum: ["BUY", "HOLD", "SELL"]
+                        },
+                        conclusion: { type: "STRING" }
+                    },
+                    required: ["decision", "conclusion"]
+                },
+                radarScores: {
+                    type: "OBJECT",
+                    properties: {
+                        growth: { type: "INTEGER" },
+                        value: { type: "INTEGER" },
+                        momentum: { type: "INTEGER" },
+                        safety: { type: "INTEGER" },
+                        macroTailwind: { type: "INTEGER" }
+                    },
+                    required: ["growth", "value", "momentum", "safety", "macroTailwind"]
+                }
+            },
+            required: ["geniusView", "veteranView", "macroView", "quantView", "finalVerdict", "radarScores"]
+        };
 
         async function startAutoPilotMultiStep(isUpdate = false, isYutaiOnly = false, isUsStock = false) {
             const segment = document.getElementById('setting-segment').value;
@@ -533,25 +789,22 @@
 
                 document.getElementById('loading-text').textContent = "収集したニュースをAIが分析し、ランキングを生成しています...";
 
-                // --- 改良: marketPhaseに5段階評価を指定 ---
-                const jsonFormat = `{
-                    "marketSignal": { "phase": "STRONG_BUY/BUY/NEUTRAL/SELL/STRONG_SELL", "reason": "string" },
-                    "sectorHeatmap": [{ "sectorName": "string", "heat": "HOT/WARM/COLD", "reason": "string" }],
-                    "ranking20": [{ "rank": 1, "ticker": "string", "companyName": "string", "sector": "string", "score": 90, "reason": "string" }]
-                }`;
-
                 const payload = {
-                    contents: [{ parts: [{ text: `以下の検索条件と外部APIから取得した最新ニュースに基づいて分析してください。\n\n【最新ニュース】\n${newsContext}\n\n【検索条件】\n${conditionText}\n\n【指示】\n1. 資金流入(HOT)と流出(COLD)のヒートマップを作成。\n2. 今の市場環境をSTRONG_BUY(爆買い期)、BUY(買い推奨期)、NEUTRAL(中立・様子見)、SELL(売り警戒期)、STRONG_SELL(即退避期)の5段階で判定せよ。\n3. 条件を満たす、有望な【おすすめランキングTOP20銘柄】を作成。\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n${jsonFormat}` }] }],
-                    systemInstruction: { parts: [{ text: "プロのアナリスト。回答はJSONのみ。" }] },
-                    generationConfig: { responseMimeType: "application/json" }
+                    contents: [{ parts: [{ text: `以下の検索条件と外部APIから取得した最新ニュースに基づいて分析してください。\n\n【最新ニュース】\n${newsContext}\n\n【検索条件】\n${conditionText}\n\n【指示】\n1. 資金流入(HOT)と流出(COLD)のヒートマップを作成。\n2. 今の市場環境をSTRONG_BUY(爆買い期)、BUY(買い推奨期)、NEUTRAL(中立・様子見)、SELL(売り警戒期)、STRONG_SELL(即退避期)の5段階で判定せよ。\n3. 条件を満たす、有望な【おすすめランキングTOP20銘柄】を作成。` }] }],
+                    systemInstruction: { parts: [{ text: "プロのアナリストとして分析せよ。出力は Structured Outputs のスキーマに厳密に従うこと。" }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: DISCOVER_RESPONSE_SCHEMA
+                    }
                 };
 
                 const result = await callGeminiAPI(payload);
-                const finalData = extractJSON(result.candidates[0].content.parts[0].text);
+                const finalData = parseStructuredResponse(result);
                 renderDiscoverResults(finalData);
+                showToast("おすすめランキングの作成が完了しました。", "success");
 
             } catch (error) {
-                alert(`スキャン失敗: ${error.message}`);
+                showToast(friendlyErrorMessage(error), "error");
                 document.getElementById('intro-panel').style.display = 'block';
             } finally {
                 loadingPanel.classList.add('hidden'); loadingPanel.classList.remove('flex');
@@ -578,7 +831,7 @@
                     signalColor.classList.add('text-green-400', 'bg-green-900/30');
                 } else if (phase === 'NEUTRAL') {
                     signalText.textContent = "中立・様子見";
-                    signalColor.classList.add('text-slate-400', 'bg-slate-800/50');
+                    signalColor.classList.add('text-slate-200', 'bg-slate-800/50');
                 } else if (phase === 'SELL') {
                     signalText.textContent = "売り警戒期";
                     signalColor.classList.add('text-orange-400', 'bg-orange-900/30');
@@ -602,7 +855,7 @@
 
                     const div = document.createElement('div');
                     div.className = `p-3 rounded-xl border flex flex-col justify-center items-center text-center ${hClass}`;
-                    div.innerHTML = `<span class="text-[11px] font-bold text-white mb-1">${sector.sectorName}</span><span class="text-[9px] text-slate-300 line-clamp-2">${sector.reason}</span>`;
+                    div.innerHTML = `<span class="text-base font-black text-white mb-1">${sector.sectorName}</span><span class="text-sm text-slate-200 line-clamp-3">${sector.reason}</span>`;
                     heatmapContainer.appendChild(div);
                 });
             }
@@ -655,7 +908,7 @@
                 
                 if (asset.verdict) {
                     clone.querySelector('.advice-text').textContent = asset.advice;
-                    clone.querySelector('.verdict-badge').textContent = asset.verdict;
+                    applyVerdictStyle(clone.querySelector('.verdict-badge'), asset.verdict);
                 }
 
                 clone.querySelector('.delete-btn').addEventListener('click', () => removeMyAsset(asset.id));
@@ -690,13 +943,16 @@
                 document.getElementById('loading-text').innerHTML = `取得したデータをもとにGemini AIが一括診断中...`;
 
                 const payload = {
-                    contents: [{ parts: [{ text: `以下の保有銘柄リストと最新データに基づき、以下の2点を実行してください。\n\n【銘柄データ】\n${combinedStockData}\n\n【市場ニュース】\n${generalNews}\n\n1. ポートフォリオ全体の「相関性・偏りリスク」の診断\n2. 各個別銘柄の最新アクション判定（BUY/HOLD/SELL）と簡潔なアドバイス\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n{ "correlationRisk": "...", "individualVerdicts": [ { "ticker": "...", "verdict": "BUY/HOLD/SELL", "advice": "..." } ] }` }] }],
-                    systemInstruction: { parts: [{ text: "プロのマネージャー。回答はJSONのみ。" }] },
-                    generationConfig: { responseMimeType: "application/json" }
+                    contents: [{ parts: [{ text: `以下の保有銘柄リストと最新データに基づき、以下の2点を実行してください。\n\n【銘柄データ】\n${combinedStockData}\n\n【市場ニュース】\n${generalNews}\n\n1. ポートフォリオ全体の「相関性・偏りリスク」の診断\n2. 各個別銘柄の最新アクション判定（BUY/HOLD/SELL）と簡潔なアドバイス` }] }],
+                    systemInstruction: { parts: [{ text: "プロのマネージャーとして診断せよ。出力は Structured Outputs のスキーマに厳密に従うこと。" }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: PORTFOLIO_SCAN_RESPONSE_SCHEMA
+                    }
                 };
                 
                 const result = await callGeminiAPI(payload);
-                const aiData = extractJSON(result.candidates[0].content.parts[0].text);
+                const aiData = parseStructuredResponse(result);
                 
                 document.getElementById('my-market-commentary').classList.remove('hidden');
                 document.getElementById('my-commentary-text').textContent = aiData.correlationRisk;
@@ -710,10 +966,11 @@
                     }
                 }
                 saveMyAssets(assets);
-                renderMyPortfolio(); 
+                renderMyPortfolio();
+                showToast("ポートフォリオの診断が完了しました。", "success");
 
             } catch (error) {
-                alert(`診断失敗: ${error.message}`);
+                showToast(friendlyErrorMessage(error), "error");
             } finally {
                 loadingPanel.classList.add('hidden'); loadingPanel.classList.remove('flex');
             }
@@ -738,26 +995,23 @@
 
                 document.getElementById('modal-loading-subtext').textContent = "取得したデータをもとにAIが詳細なカルテを作成中...";
 
-                const jsonFormatObj = {
-                    geniusView: "string", veteranView: "string", macroView: "string", quantView: "string",
-                    finalVerdict: { decision: "BUY/HOLD/SELL", conclusion: "string" },
-                    radarScores: { growth: 0, value: 0, momentum: 0, safety: 0, macroTailwind: 0 }
-                };
-
                 const payload = {
-                    contents: [{ parts: [{ text: `外部APIから取得した以下の最新データを用いて「${ticker}」を分析してください。\n\n【株価データ】\n${stockData}\n\n【最新ニュース】\n${newsData}\n\n【出力形式】\n必ず以下のJSONフォーマットのみを出力してください。\n${JSON.stringify(jsonFormatObj, null, 2)}` }] }],
-                    systemInstruction: { parts: [{ text: "最高峰のアナリストAI。回答はJSONのみ。radarScores内の各数値は必ず0から100の間の整数（例: 80）で出力してください。" }] },
-                    generationConfig: { responseMimeType: "application/json" }
+                    contents: [{ parts: [{ text: `外部APIから取得した以下の最新データを用いて「${ticker}」を分析してください。\n\n【株価データ】\n${stockData}\n\n【最新ニュース】\n${newsData}\n\n【指示】\ngeniusViewはグロース(成長性)、veteranViewはバリュー(割安度)、macroViewはマクロ(市場環境)、quantViewはクオンツ(データ)の観点で分析せよ。radarScoresの各数値は0〜100の整数で評価せよ。` }] }],
+                    systemInstruction: { parts: [{ text: "最高峰のアナリストAIとして分析せよ。出力は Structured Outputs のスキーマに厳密に従うこと。radarScoresの各数値は0から100の整数とする。" }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: DEEP_SCAN_RESPONSE_SCHEMA
+                    }
                 };
                 
                 const result = await callGeminiAPI(payload);
-                const rawData = extractJSON(result.candidates[0].content.parts[0].text);
+                const rawData = parseStructuredResponse(result);
                 
                 document.getElementById('modal-genius-view').textContent = rawData.geniusView;
                 document.getElementById('modal-veteran-view').textContent = rawData.veteranView;
                 document.getElementById('modal-macro-view').textContent = rawData.macroView;
                 document.getElementById('modal-quant-view').textContent = rawData.quantView;
-                document.getElementById('modal-decision-badge').textContent = rawData.finalVerdict.decision;
+                applyVerdictStyle(document.getElementById('modal-decision-badge'), rawData.finalVerdict.decision);
                 document.getElementById('modal-final-conclusion').textContent = rawData.finalVerdict.conclusion;
                 
                 // --- 修復: グラフ線・グリッド線の色調整と確実なスケール固定設定 ---
@@ -825,7 +1079,7 @@
                 document.getElementById('modal-content-data').classList.add('flex');
 
             } catch (error) {
-                alert(`カルテ生成失敗: ${error.message}`);
+                showToast(friendlyErrorMessage(error), "error");
                 document.getElementById('modal-loading').classList.add('hidden');
             }
         }
